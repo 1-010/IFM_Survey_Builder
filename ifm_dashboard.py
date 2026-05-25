@@ -255,9 +255,8 @@ with tab_dashboard:
         compare_mode = st.checkbox("👥 2つのグループを比較する（比較モード）", value=False)
         
         # フィルターオプション用のユニーク値リスト
-        unique_domains = sorted([d for d in resp_df['domain'].unique() if d])
+        unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
         unique_years = ["すべて", "0～2年", "2～5年", "5～10年", "10～15年", "15年以上"]
-        unique_depts = sorted([t for t in resp_df['team'].unique() if t])
         
         # フィルター適用関数
         def filter_data(data, domain, exp, team_kw, category):
