@@ -418,25 +418,27 @@ with tab_dashboard:
                     st.write("**成熟度定義：**")
                     
                     levels_df = pd.DataFrame([
-                        {"Level": "L1 (手作業)", "Description": row['levels']['L1'], "L_val": 1},
-                        {"Level": "L2 (デジタル化)", "Description": row['levels']['L2'], "L_val": 2},
-                        {"Level": "L3 (協力/部門間連携)", "Description": row['levels']['L3'], "L_val": 3},
-                        {"Level": "L4 (管理/全社管理)", "Description": row['levels']['L4'], "L_val": 4},
-                        {"Level": "L5 (卓越性/AI)", "Description": row['levels']['L5'], "L_val": 5}
+                        {"Level": "L1 (手作業)", "Description": row['levels']['L1']},
+                        {"Level": "L2 (デジタル化)", "Description": row['levels']['L2']},
+                        {"Level": "L3 (協力/部門間連携)", "Description": row['levels']['L3']},
+                        {"Level": "L4 (管理/全社管理)", "Description": row['levels']['L4']},
+                        {"Level": "L5 (卓越性/AI)", "Description": row['levels']['L5']}
                     ])
                     
                     closest_asis = round(avg_asis) if pd.notna(avg_asis) else 0
                     closest_tobe = round(avg_tobe) if pd.notna(avg_tobe) else 0
                     
                     def highlight_levels(row_val):
+                        idx = row_val.name  # 行のインデックス (0〜4)
+                        level_val = idx + 1 # インデックス0がL1、1がL2...に対応
                         styles = [''] * len(row_val)
-                        if row_val['L_val'] == closest_asis and row_val['L_val'] == closest_tobe:
+                        if level_val == closest_asis and level_val == closest_tobe:
                             styles = ['background-color: rgba(255, 255, 0, 0.2); font-weight: bold'] * len(row_val)
-                        elif row_val['L_val'] == closest_asis:
+                        elif level_val == closest_asis:
                             styles = ['background-color: rgba(0, 0, 255, 0.1); font-weight: bold'] * len(row_val)
-                        elif row_val['L_val'] == closest_tobe:
+                        elif level_val == closest_tobe:
                             styles = ['background-color: rgba(0, 255, 0, 0.1); font-weight: bold'] * len(row_val)
                         return styles
                     
-                    styled_df = levels_df.style.apply(highlight_levels, axis=1).hide(subset=['L_val'], axis=1)
+                    styled_df = levels_df.style.apply(highlight_levels, axis=1)
                     st.dataframe(styled_df, use_container_width=True, hide_index=True)
