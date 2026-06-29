@@ -6,3 +6,4 @@ jsonschema>=4.0.0
 streamlit-autorefresh>=1.0.0
 gspread>=6.0.0
 google-auth>=2.0.0
+google-cloud-firestore>=2.0.0
