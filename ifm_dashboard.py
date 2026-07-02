@@ -170,7 +170,20 @@ if q_df.empty:
     st.stop()
 
 # Tabs
-tab_input, tab_dashboard, tab_admin = st.tabs(["📝 アンケート回答入力", "📊 結果分析ダッシュボード", "🔧 営業管理（カスタム発行）"])
+# 顧客配布用リンク (?survey_id=xxx) でアクセスされた場合は、ダッシュボードと管理タブを非表示（非表示にすれば情報漏洩の余地もない）にする
+# DBにIDがない場合（作成途中や未登録ID）でも、URLパラメータがある場合は顧客向けアクセスとみなして隠蔽を強制する
+is_client_access = "survey_id" in st.query_params
+
+if is_client_access:
+    tabs = st.tabs(["📝 アンケート回答入力"])
+    tab_input = tabs[0]
+    tab_dashboard = None
+    tab_admin = None
+else:
+    tabs = st.tabs(["📝 アンケート回答入力", "📊 結果分析ダッシュボード", "🔧 営業管理（カスタム発行）"])
+    tab_input = tabs[0]
+    tab_dashboard = tabs[1]
+    tab_admin = tabs[2]
 
 ### 📝 Tab 1: アンケート回答入力 ###
 with tab_input:
@@ -211,7 +224,7 @@ with tab_input:
             with st.container(border=True):
                 # 設問文の表示 (スプレッドシートのI列)
                 st.markdown(f"#### **{row['phase']}** ({qid})")
-                st.markdown(f"<div style='background-color:#f0f2f6; padding:10px; border-radius:5px; margin-bottom:10px;'>{row['question_text']}</div>", unsafe_allow_html=True)
+                st.markdown(f"<div style='background-color: var(--secondary-background-color); color: var(--text-color); padding:10px; border-radius:5px; margin-bottom:10px;'>{row['question_text']}</div>", unsafe_allow_html=True)
                 
                 # スキップトグル
                 skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=f"skip_{qid}")
@@ -321,313 +334,324 @@ with tab_input:
 
 
 ### 📊 Tab 2: 結果分析ダッシュボード ###
-with tab_dashboard:
-    st.header("成熟度アセスメントの分析・比較")
-    
-    # リアルタイムで回答を読み込み（Firestore + Sheets マージ）
-    resp_df = load_all_responses_merged()
-    
-    if resp_df.empty:
-        st.warning("まだ回答データがないか、スプレッドシートの取得に失敗しています。「📝 アンケート回答入力」タブでの回答送信、またはスプレッドシートの共有設定を確認してください。")
-    else:
-        # グループ比較モード
-        st.subheader("📊 絞り込みとグループ比較")
-        compare_mode = st.checkbox("👥 2つのグループを比較する（比較モード）", value=False)
+if tab_dashboard:
+    with tab_dashboard:
+        st.header("成熟度アセスメントの分析・比較")
         
-        # フィルターオプション用のユニーク値リスト
-        unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
-        unique_years = ["すべて", "0～2年", "2～5年", "5～10年", "10～15年", "15年以上"]
+        # 認証（パスワードで二重保護）
+        dash_pw = st.text_input("結果分析ダッシュボード閲覧用パスワードを入力してください", type="password", key="dash_pw_input")
+        if dash_pw == "ifm-sales":
+            st.success("認証されました。")
+            
+            # リアルタイムで回答を読み込み（Firestore + Sheets マージ）
+            resp_df = load_all_responses_merged()
+            
+            if resp_df.empty:
+                st.warning("まだ回答データがないか、スプレッドシートの取得に失敗しています。「📝 アンケート回答入力」タブでの回答送信、またはスプレッドシートの共有設定を確認してください。")
+            else:
+                # グループ比較モード
+                st.subheader("📊 絞り込みとグループ比較")
+                compare_mode = st.checkbox("👥 2つのグループを比較する（比較モード）", value=False)
+                
+                # フィルターオプション用のユニーク値リスト
+                unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
+                unique_years = ["すべて", "0～2年", "2～5年", "5～10年", "10～15年", "15年以上"]
+                
+                # フィルター適用関数
+                def filter_data(data, domain, exp, team_kw, category):
+                    filtered = data.copy()
+                    if domain != "すべて":
+                        filtered = filtered[filtered['domain'] == domain]
+                    if exp != "すべて":
+                        filtered = filtered[filtered['experience_years'] == exp]
+                    if team_kw.strip():
+                        # フリーワードでチーム・部署名を部分一致検索
+                        filtered = filtered[filtered['team'].str.contains(team_kw.strip(), case=False, na=False)]
+                    if category == "生産技術のみ":
+                        filtered = filtered[filtered['department'] == "生産技術"]
+                    elif category == "工場建築・建設のみ":
+                        filtered = filtered[filtered['department'] == "工場建築・建設"]
+                    return filtered
         
-        # フィルター適用関数
-        def filter_data(data, domain, exp, team_kw, category):
-            filtered = data.copy()
-            if domain != "すべて":
-                filtered = filtered[filtered['domain'] == domain]
-            if exp != "すべて":
-                filtered = filtered[filtered['experience_years'] == exp]
-            if team_kw.strip():
-                # フリーワードでチーム・部署名を部分一致検索
-                filtered = filtered[filtered['team'].str.contains(team_kw.strip(), case=False, na=False)]
-            if category == "生産技術のみ":
-                filtered = filtered[filtered['department'] == "生産技術"]
-            elif category == "工場建築・建設のみ":
-                filtered = filtered[filtered['department'] == "工場建築・建設"]
-            return filtered
-
-        # フィルターUIの構築
-        if compare_mode:
-            col_filter_a, col_filter_b = st.columns(2)
-            
-            with col_filter_a:
-                st.markdown("#### 🔵 グループA の条件")
-                domain_a = st.selectbox("ドメイン (グループA)", ["すべて"] + unique_domains, key="domain_a")
-                exp_a = st.selectbox("勤続年数 (グループA)", unique_years, key="exp_a")
-                team_a = st.text_input("部署名（部分一致・グループA）", key="team_a", placeholder="例: 技術部")
-                cat_a = st.radio("表示カテゴリ (グループA)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_a", horizontal=True)
+                # フィルターUIの構築
+                if compare_mode:
+                    col_filter_a, col_filter_b = st.columns(2)
+                    
+                    with col_filter_a:
+                        st.markdown("#### 🔵 グループA の条件")
+                        domain_a = st.selectbox("ドメイン (グループA)", ["すべて"] + unique_domains, key="domain_a")
+                        exp_a = st.selectbox("勤続年数 (グループA)", unique_years, key="exp_a")
+                        team_a = st.text_input("部署名（部分一致・グループA）", key="team_a", placeholder="例: 技術部")
+                        cat_a = st.radio("表示カテゴリ (グループA)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_a", horizontal=True)
+                        
+                    with col_filter_b:
+                        st.markdown("#### 🟠 グループB の条件")
+                        domain_b = st.selectbox("ドメイン (グループB)", ["すべて"] + unique_domains, key="domain_b")
+                        exp_b = st.selectbox("勤続年数 (グループB)", unique_years, key="exp_b")
+                        team_b = st.text_input("部署名（部分一致・グループB）", key="team_b", placeholder="例: 建築")
+                        cat_b = st.radio("表示カテゴリ (グループB)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_b", horizontal=True)
+                        
+                    # データのフィルタリング
+                    df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a)
+                    df_b = filter_data(resp_df, domain_b, exp_b, team_b, cat_b)
+                    
+                else:
+                    # 通常の単一フィルターモード
+                    col_f1, col_f2, col_f3 = st.columns(3)
+                    with col_f1:
+                        domain_a = st.selectbox("メールアドレスのドメイン", ["すべて"] + unique_domains, key="single_domain")
+                    with col_f2:
+                        exp_a = st.selectbox("勤続年数", unique_years, key="single_exp")
+                    with col_f3:
+                        team_a = st.text_input("部署名（部分一致で検索）", key="single_team", placeholder="例: 生産技術")
+                        
+                    cat_a = st.radio("表示カテゴリ", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="single_cat", horizontal=True)
+                    
+                    df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a)
+                    df_b = pd.DataFrame() # 空
+        
+                # レーダーチャートプロット関数
+                def plot_radar_comparison(df_group_a, df_group_b, is_compare):
+                    fig = go.Figure()
+                    
+                    # 各問に対する平均値を集計（N/A値は pandas の mean で自動的に除外されます）
+                    agg_a = df_group_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
+                    # 軸が途切れないようにソート
+                    agg_a = agg_a.sort_values('question_id')
+                    
+                    theta_labels = [f"{row['phase']}\n({row['question_id']})" for _, row in agg_a.iterrows()]
+                    
+                    if not agg_a.empty:
+                        # グループA (As-Is)
+                        fig.add_trace(go.Scatterpolar(
+                            r=agg_a['as_is'].tolist() + [agg_a['as_is'].tolist()[0]],
+                            theta=theta_labels + [theta_labels[0]],
+                            fill='toself',
+                            name='グループA: 現状の評価',
+                            line_color='#1f77b4', # 青
+                            opacity=0.5
+                        ))
+                        # グループA (To-Be)
+                        fig.add_trace(go.Scatterpolar(
+                            r=agg_a['to_be'].tolist() + [agg_a['to_be'].tolist()[0]],
+                            theta=theta_labels + [theta_labels[0]],
+                            fill='toself',
+                            name='グループA: 将来の目標',
+                            line_color='#aec7e8', # 水色
+                            opacity=0.3
+                        ))
+                        
+                    if is_compare and not df_group_b.empty:
+                        agg_b = df_group_b.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
+                        agg_b = agg_b.sort_values('question_id')
+                        theta_labels_b = [f"{row['phase']}\n({row['question_id']})" for _, row in agg_b.iterrows()]
+                        
+                        if not agg_b.empty:
+                            # グループB (As-Is)
+                            fig.add_trace(go.Scatterpolar(
+                                r=agg_b['as_is'].tolist() + [agg_b['as_is'].tolist()[0]],
+                                theta=theta_labels_b + [theta_labels_b[0]],
+                                fill='toself',
+                                name='グループB: 現状の評価',
+                                line_color='#ff7f0e', # オレンジ
+                                opacity=0.5
+                            ))
+                            # グループB (To-Be)
+                            fig.add_trace(go.Scatterpolar(
+                                r=agg_b['to_be'].tolist() + [agg_b['to_be'].tolist()[0]],
+                                theta=theta_labels_b + [theta_labels_b[0]],
+                                fill='toself',
+                                name='グループB: 将来の目標',
+                                line_color='#ffbb78', # 薄オレンジ
+                                opacity=0.3
+                            ))
+        
+                    fig.update_layout(
+                        polar=dict(
+                            radialaxis=dict(
+                                visible=True,
+                                range=[0, 5],
+                                tickmode='linear',
+                                tick0=1,
+                                dtick=1
+                            )),
+                        showlegend=True,
+                        title="成熟度アセスメント レーダー比較",
+                        margin=dict(l=60, r=60, t=60, b=60),
+                        height=500
+                    )
+                    return fig
+        
+                # レーダーチャート表示
+                st.markdown("### 📊 分析結果チャート")
+                if df_a.empty and (not compare_mode or df_b.empty):
+                    st.warning("⚠️ 指定された条件に合致する回答データがありません。フィルターの条件を緩めてください。")
+                else:
+                    fig = plot_radar_comparison(df_a, df_b, compare_mode)
+                    st.plotly_chart(fig, use_container_width=True)
+        
+                # 詳細のテーブル分析（グループAベース）
+                st.markdown("---")
+                st.markdown("### 📝 詳細アセスメントギャップ分析 (グループAの集計値)")
                 
-            with col_filter_b:
-                st.markdown("#### 🟠 グループB の条件")
-                domain_b = st.selectbox("ドメイン (グループB)", ["すべて"] + unique_domains, key="domain_b")
-                exp_b = st.selectbox("勤続年数 (グループB)", unique_years, key="exp_b")
-                team_b = st.text_input("部署名（部分一致・グループB）", key="team_b", placeholder="例: 建築")
-                cat_b = st.radio("表示カテゴリ (グループB)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_b", horizontal=True)
-                
-            # データのフィルタリング
-            df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a)
-            df_b = filter_data(resp_df, domain_b, exp_b, team_b, cat_b)
-            
+                if not df_a.empty:
+                    agg_a = df_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
+                    merged_df = pd.merge(q_df, agg_a, on=["question_id", "phase"])
+                    
+                    # 各問ごとの平均を計算して、レベルとマッピング
+                    for _, row in merged_df.iterrows():
+                        avg_asis = row['as_is']
+                        avg_tobe = row['to_be']
+                        
+                        # いずれも NaN (該当全員がスキップ) の場合は表示を別にする
+                        if pd.isna(avg_asis) and pd.isna(avg_tobe):
+                            with st.expander(f"【{row['department']}】 {row['phase']} ({row['question_id']}) : 全員が該当なしとしてスキップ"):
+                                st.info("この設問はすべての選択回答者によってスキップされました。")
+                            continue
+                        
+                        asis_str = f"{round(avg_asis, 1)}" if pd.notna(avg_asis) else "該当なし"
+                        tobe_str = f"{round(avg_tobe, 1)}" if pd.notna(avg_tobe) else "該当なし"
+                        
+                        with st.expander(f"【{row['department']}】 {row['phase']} ({row['question_id']}) : 現状の評価平均 {asis_str} ➡️ 将来の目標平均 {tobe_str}"):
+                            st.write("**成熟度定義：**")
+                            
+                            levels_df = pd.DataFrame([
+                                {"Level": "L1 (手作業)", "Description": row['levels']['L1']},
+                                {"Level": "L2 (デジタル化)", "Description": row['levels']['L2']},
+                                {"Level": "L3 (協力/部門間連携)", "Description": row['levels']['L3']},
+                                {"Level": "L4 (管理/全社管理)", "Description": row['levels']['L4']},
+                                {"Level": "L5 (卓越性/AI)", "Description": row['levels']['L5']}
+                            ])
+                            
+                            closest_asis = round(avg_asis) if pd.notna(avg_asis) else 0
+                            closest_tobe = round(avg_tobe) if pd.notna(avg_tobe) else 0
+                            
+                            def highlight_levels(row_val):
+                                idx = row_val.name  # 行のインデックス (0〜4)
+                                level_val = idx + 1 # インデックス0がL1、1がL2...に対応
+                                styles = [''] * len(row_val)
+                                if level_val == closest_asis and level_val == closest_tobe:
+                                    styles = ['background-color: rgba(255, 255, 0, 0.2); font-weight: bold'] * len(row_val)
+                                elif level_val == closest_asis:
+                                    styles = ['background-color: rgba(0, 0, 255, 0.1); font-weight: bold'] * len(row_val)
+                                elif level_val == closest_tobe:
+                                    styles = ['background-color: rgba(0, 255, 0, 0.1); font-weight: bold'] * len(row_val)
+                                return styles
+                            
+                            styled_df = levels_df.style.apply(highlight_levels, axis=1)
+                            st.dataframe(styled_df, use_container_width=True, hide_index=True)
         else:
-            # 通常の単一フィルターモード
-            col_f1, col_f2, col_f3 = st.columns(3)
-            with col_f1:
-                domain_a = st.selectbox("メールアドレスのドメイン", ["すべて"] + unique_domains, key="single_domain")
-            with col_f2:
-                exp_a = st.selectbox("勤続年数", unique_years, key="single_exp")
-            with col_f3:
-                team_a = st.text_input("部署名（部分一致で検索）", key="single_team", placeholder="例: 生産技術")
-                
-            cat_a = st.radio("表示カテゴリ", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="single_cat", horizontal=True)
-            
-            df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a)
-            df_b = pd.DataFrame() # 空
-
-        # レーダーチャートプロット関数
-        def plot_radar_comparison(df_group_a, df_group_b, is_compare):
-            fig = go.Figure()
-            
-            # 各問に対する平均値を集計（N/A値は pandas の mean で自動的に除外されます）
-            agg_a = df_group_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
-            # 軸が途切れないようにソート
-            agg_a = agg_a.sort_values('question_id')
-            
-            theta_labels = [f"{row['phase']}\n({row['question_id']})" for _, row in agg_a.iterrows()]
-            
-            if not agg_a.empty:
-                # グループA (As-Is)
-                fig.add_trace(go.Scatterpolar(
-                    r=agg_a['as_is'].tolist() + [agg_a['as_is'].tolist()[0]],
-                    theta=theta_labels + [theta_labels[0]],
-                    fill='toself',
-                    name='グループA: 現状の評価',
-                    line_color='#1f77b4', # 青
-                    opacity=0.5
-                ))
-                # グループA (To-Be)
-                fig.add_trace(go.Scatterpolar(
-                    r=agg_a['to_be'].tolist() + [agg_a['to_be'].tolist()[0]],
-                    theta=theta_labels + [theta_labels[0]],
-                    fill='toself',
-                    name='グループA: 将来の目標',
-                    line_color='#aec7e8', # 水色
-                    opacity=0.3
-                ))
-                
-            if is_compare and not df_group_b.empty:
-                agg_b = df_group_b.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
-                agg_b = agg_b.sort_values('question_id')
-                theta_labels_b = [f"{row['phase']}\n({row['question_id']})" for _, row in agg_b.iterrows()]
-                
-                if not agg_b.empty:
-                    # グループB (As-Is)
-                    fig.add_trace(go.Scatterpolar(
-                        r=agg_b['as_is'].tolist() + [agg_b['as_is'].tolist()[0]],
-                        theta=theta_labels_b + [theta_labels_b[0]],
-                        fill='toself',
-                        name='グループB: 現状の評価',
-                        line_color='#ff7f0e', # オレンジ
-                        opacity=0.5
-                    ))
-                    # グループB (To-Be)
-                    fig.add_trace(go.Scatterpolar(
-                        r=agg_b['to_be'].tolist() + [agg_b['to_be'].tolist()[0]],
-                        theta=theta_labels_b + [theta_labels_b[0]],
-                        fill='toself',
-                        name='グループB: 将来の目標',
-                        line_color='#ffbb78', # 薄オレンジ
-                        opacity=0.3
-                    ))
-
-            fig.update_layout(
-                polar=dict(
-                    radialaxis=dict(
-                        visible=True,
-                        range=[0, 5],
-                        tickmode='linear',
-                        tick0=1,
-                        dtick=1
-                    )),
-                showlegend=True,
-                title="成熟度アセスメント レーダー比較",
-                margin=dict(l=60, r=60, t=60, b=60),
-                height=500
-            )
-            return fig
-
-        # レーダーチャート表示
-        st.markdown("### 📊 分析結果チャート")
-        if df_a.empty and (not compare_mode or df_b.empty):
-            st.warning("⚠️ 指定された条件に合致する回答データがありません。フィルターの条件を緩めてください。")
-        else:
-            fig = plot_radar_comparison(df_a, df_b, compare_mode)
-            st.plotly_chart(fig, use_container_width=True)
-
-        # 詳細のテーブル分析（グループAベース）
-        st.markdown("---")
-        st.markdown("### 📝 詳細アセスメントギャップ分析 (グループAの集計値)")
-        
-        if not df_a.empty:
-            agg_a = df_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
-            merged_df = pd.merge(q_df, agg_a, on=["question_id", "phase"])
-            
-            # 各問ごとの平均を計算して、レベルとマッピング
-            for _, row in merged_df.iterrows():
-                avg_asis = row['as_is']
-                avg_tobe = row['to_be']
-                
-                # いずれも NaN (該当全員がスキップ) の場合は表示を別にする
-                if pd.isna(avg_asis) and pd.isna(avg_tobe):
-                    with st.expander(f"【{row['department']}】 {row['phase']} ({row['question_id']}) : 全員が該当なしとしてスキップ"):
-                        st.info("この設問はすべての選択回答者によってスキップされました。")
-                    continue
-                
-                asis_str = f"{round(avg_asis, 1)}" if pd.notna(avg_asis) else "該当なし"
-                tobe_str = f"{round(avg_tobe, 1)}" if pd.notna(avg_tobe) else "該当なし"
-                
-                with st.expander(f"【{row['department']}】 {row['phase']} ({row['question_id']}) : 現状の評価平均 {asis_str} ➡️ 将来の目標平均 {tobe_str}"):
-                    st.write("**成熟度定義：**")
-                    
-                    levels_df = pd.DataFrame([
-                        {"Level": "L1 (手作業)", "Description": row['levels']['L1']},
-                        {"Level": "L2 (デジタル化)", "Description": row['levels']['L2']},
-                        {"Level": "L3 (協力/部門間連携)", "Description": row['levels']['L3']},
-                        {"Level": "L4 (管理/全社管理)", "Description": row['levels']['L4']},
-                        {"Level": "L5 (卓越性/AI)", "Description": row['levels']['L5']}
-                    ])
-                    
-                    closest_asis = round(avg_asis) if pd.notna(avg_asis) else 0
-                    closest_tobe = round(avg_tobe) if pd.notna(avg_tobe) else 0
-                    
-                    def highlight_levels(row_val):
-                        idx = row_val.name  # 行のインデックス (0〜4)
-                        level_val = idx + 1 # インデックス0がL1、1がL2...に対応
-                        styles = [''] * len(row_val)
-                        if level_val == closest_asis and level_val == closest_tobe:
-                            styles = ['background-color: rgba(255, 255, 0, 0.2); font-weight: bold'] * len(row_val)
-                        elif level_val == closest_asis:
-                            styles = ['background-color: rgba(0, 0, 255, 0.1); font-weight: bold'] * len(row_val)
-                        elif level_val == closest_tobe:
-                            styles = ['background-color: rgba(0, 255, 0, 0.1); font-weight: bold'] * len(row_val)
-                        return styles
-                    
-                    styled_df = levels_df.style.apply(highlight_levels, axis=1)
-                    st.dataframe(styled_df, use_container_width=True, hide_index=True)
+            st.info("管理パスワードを入力してください。")
 
 
 ### 🔧 Tab 3: 営業管理（カスタム発行） ###
-with tab_admin:
-    st.header("🔧 営業担当用 カスタムアンケート発行管理")
-    st.info("営業担当者が顧客に合わせたカスタムアンケートを発行・管理するためのページです。")
-    
-    # 認証
-    admin_pw = st.text_input("管理用パスワードを入力してください", type="password")
-    if admin_pw == "ifm-sales":
-        st.success("認証されました。")
+if tab_admin:
+    with tab_admin:
+        st.header("🔧 営業担当用 カスタムアンケート発行管理")
+        st.info("営業担当者が顧客に合わせたカスタムアンケートを発行・管理するためのページです。")
         
-        # 1. 基本情報入力
-        st.subheader("1. アンケート基本設定")
-        col_ad1, col_ad2 = st.columns(2)
-        with col_ad1:
-            new_survey_id = st.text_input("アンケートID (英数字・ハイフンのみ) *", placeholder="例: toyota-2026", help="このIDがURLの末尾になります（?survey_id=ID）")
-            new_client_name = st.text_input("顧客企業名 *", placeholder="例: トヨタ自動車株式会社")
-        with col_ad2:
-            new_creator = st.text_input("作成者名 *", placeholder="例: 佐藤 営業担当")
+        # 認証
+        admin_pw = st.text_input("管理用パスワードを入力してください", type="password")
+        if admin_pw == "ifm-sales":
+            st.success("認証されました。")
             
-        # 既存のロード機能
-        if new_survey_id.strip():
-            # Validate format
-            if not re.match(r"^[a-zA-Z0-9\-_]+$", new_survey_id.strip()):
-                st.error("⚠️ アンケートIDは英数字、ハイフン(-)、アンダースコア(_)のみ使用可能です。")
-            else:
-                if st.button("既存のカスタム設問を読み込む (IDが存在する場合)"):
-                    existing = get_custom_survey(new_survey_id.strip())
-                    if existing:
-                        st.session_state[f"loaded_survey_{new_survey_id}"] = existing
-                        st.success(f"ID: `{new_survey_id}` の既存設定を読み込みました！")
-                    else:
-                        st.warning(f"ID: `{new_survey_id}` は新規登録用です（既存の設定はありません）。")
-        
-        # 2. 設問テキストのカスタマイズ
-        st.subheader("2. 設問テキストのカスタマイズ")
-        st.markdown("各フェーズの設問文を、顧客の状況に合わせてカスタマイズしてください（空欄の場合はデフォルトの文が使われます）。")
-        
-        default_qs = load_default_questions()
-        custom_questions_data = []
-        
-        # Check if we have loaded data in session
-        loaded_survey = st.session_state.get(f"loaded_survey_{new_survey_id}")
-        existing_qs_map = {}
-        if loaded_survey:
-            existing_qs_map = {q["question_id"]: q["question_text"] for q in loaded_survey.get("questions", [])}
-            
-        for q in default_qs:
-            qid = q["question_id"]
-            dept = q["department"]
-            phase = q["phase"]
-            default_text = q["question_text"]
-            
-            # Use loaded customized text if available, else default
-            current_value = existing_qs_map.get(qid, default_text)
-            
-            with st.expander(f"【{dept}】 {phase} ({qid})"):
-                custom_text = st.text_area(
-                    f"設問文 ({qid})",
-                    value=current_value,
-                    key=f"edit_text_{qid}",
-                    height=100
-                )
+            # 1. 基本情報入力
+            st.subheader("1. アンケート基本設定")
+            col_ad1, col_ad2 = st.columns(2)
+            with col_ad1:
+                new_survey_id = st.text_input("アンケートID (英数字・ハイフンのみ) *", placeholder="例: toyota-2026", help="このIDがURLの末尾になります（?survey_id=ID）")
+                new_client_name = st.text_input("顧客企業名 *", placeholder="例: トヨタ自動車株式会社")
+            with col_ad2:
+                new_creator = st.text_input("作成者名 *", placeholder="例: 佐藤 営業担当")
                 
-            # Build the question entry
-            custom_questions_data.append({
-                "department": dept,
-                "question_id": qid,
-                "phase": phase,
-                "question_text": custom_text.strip() if custom_text.strip() else default_text,
-                "levels": q["levels"] # levels definitions remain master-aligned
-            })
-            
-        # 3. 発行・保存
-        st.markdown("---")
-        if st.button("アンケートを発行・保存する", type="primary", use_container_width=True):
-            if not new_survey_id.strip():
-                st.error("❌ アンケートIDを入力してください。")
-            elif not new_client_name.strip():
-                st.error("❌ 顧客企業名を入力してください。")
-            elif not new_creator.strip():
-                st.error("❌ 作成者名を入力してください。")
-            else:
-                sid = new_survey_id.strip()
-                success = save_custom_survey(
-                    survey_id=sid,
-                    client_name=new_client_name.strip(),
-                    creator=new_creator.strip(),
-                    questions_list=custom_questions_data
-                )
-                
-                if success:
-                    st.success(f"🎉 カスタムアンケート `{sid}` が正常にデータベースへ保存・発行されました！")
-                    
-                    # Generate Links
-                    prod_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?survey_id={sid}"
-                    local_url = f"http://localhost:8501/?survey_id={sid}"
-                    
-                    st.info(f"📋 **顧客配信用リンク (本番環境):**  \n`{prod_url}`")
-                    st.write(f"🔗 [本番環境リンクを開く]({prod_url})")
-                    st.info(f"💻 **テスト用リンク (ローカル環境):**  \n`{local_url}`")
-                    st.write(f"🔗 [ローカルテストリンクを開く]({local_url})")
-                    st.balloons()
+            # 既存のロード機能
+            if new_survey_id.strip():
+                # Validate format
+                if not re.match(r"^[a-zA-Z0-9\-_]+$", new_survey_id.strip()):
+                    st.error("⚠️ アンケートIDは英数字、ハイフン(-), アンダースコア(_)のみ使用可能です。")
                 else:
-                    st.error("❌ カスタムアンケートの保存に失敗しました。")
+                    if st.button("既存のカスタム設問を読み込む (IDが存在する場合)"):
+                        existing = get_custom_survey(new_survey_id.strip())
+                        if existing:
+                            st.session_state[f"loaded_survey_{new_survey_id}"] = existing
+                            st.success(f"ID: `{new_survey_id}` の既存設定を読み込みました！")
+                        else:
+                            st.warning(f"ID: `{new_survey_id}` は新規登録用です（既存の設定はありません）。")
+            
+            # 2. 設問テキストのカスタマイズ
+            st.subheader("2. 設問テキストのカスタマイズ")
+            st.markdown("各フェーズの設問文を、顧客の状況に合わせてカスタマイズしてください（空欄の場合はデフォルトの文が使われます）。")
+            
+            default_qs = load_default_questions()
+            custom_questions_data = []
+            
+            # Check if we have loaded data in session
+            loaded_survey = st.session_state.get(f"loaded_survey_{new_survey_id}")
+            existing_qs_map = {}
+            if loaded_survey:
+                existing_qs_map = {q["question_id"]: q["question_text"] for q in loaded_survey.get("questions", [])}
+                
+            for q in default_qs:
+                qid = q["question_id"]
+                dept = q["department"]
+                phase = q["phase"]
+                default_text = q["question_text"]
+                
+                # Use loaded customized text if available, else default
+                current_value = existing_qs_map.get(qid, default_text)
+                
+                with st.expander(f"【{dept}】 {phase} ({qid})"):
+                    custom_text = st.text_area(
+                        f"設問文 ({qid})",
+                        value=current_value,
+                        key=f"edit_text_{qid}",
+                        height=100
+                    )
                     
-    elif admin_pw != "":
-        st.error("パスワードが正しくありません。")
+                # Build the question entry
+                custom_questions_data.append({
+                    "department": dept,
+                    "question_id": qid,
+                    "phase": phase,
+                    "question_text": custom_text.strip() if custom_text.strip() else default_text,
+                    "levels": q["levels"] # levels definitions remain master-aligned
+                })
+                
+            # 3. 発行・保存
+            st.markdown("---")
+            if st.button("アンケートを発行・保存する", type="primary", use_container_width=True):
+                if not new_survey_id.strip():
+                    st.error("❌ アンケートIDを入力してください。")
+                elif not new_client_name.strip():
+                    st.error("❌ 顧客企業名を入力してください。")
+                elif not new_creator.strip():
+                    st.error("❌ 作成者名を入力してください。")
+                else:
+                    sid = new_survey_id.strip()
+                    success = save_custom_survey(
+                        survey_id=sid,
+                        client_name=new_client_name.strip(),
+                        creator=new_creator.strip(),
+                        questions_list=custom_questions_data
+                    )
+                    
+                    if success:
+                        st.success(f"🎉 カスタムアンケート `{sid}` が正常にデータベースへ保存・発行されました！")
+                        
+                        # Generate Links
+                        prod_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?survey_id={sid}"
+                        local_url = f"http://localhost:8501/?survey_id={sid}"
+                        
+                        st.info("📋 **顧客配信用リンク (本番環境):**")
+                        st.code(prod_url, language=None)
+                        st.write(f"🔗 [本番環境リンクを開く]({prod_url})")
+                        st.info("💻 **テスト用リンク (ローカル環境):**")
+                        st.code(local_url, language=None)
+                        st.write(f"🔗 [ローカルテストリンクを開く]({local_url})")
+                        st.balloons()
+                    else:
+                        st.error("❌ カスタムアンケートの保存に失敗しました。")
+                        
+        elif admin_pw != "":
+            st.error("パスワードが正しくありません。")
 
