@@ -27,8 +27,8 @@ st.markdown(
     footer {visibility: hidden; display: none !important;}
     #MainMenu {visibility: hidden; display: none !important;}
     /* Streamlit Community Cloudの右下ホバーバッジ（Made with Streamlit）を完全消去 */
-    .viewerBadge_container__1QS1h {display: none !important;}
-    .viewerBadge_link__1QS1h {display: none !important;}
+    [class^="viewerBadge"] {display: none !important;}
+    [class*="viewerBadge"] {display: none !important;}
     div[data-testid="stStatusWidget"] {visibility: hidden; display: none !important;}
     </style>
     """,
