@@ -18,6 +18,19 @@ from db_helper import (
 
 # Page Config
 st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
+
+# アプリ全体でGitHubリンク、フッター、Streamlitメニューを完全隠蔽（不要な露出を防止）
+st.markdown(
+    """
+    <style>
+    header {visibility: hidden; display: none !important;}
+    footer {visibility: hidden; display: none !important;}
+    #MainMenu {visibility: hidden; display: none !important;}
+    </style>
+    """,
+    unsafe_allow_html=True
+)
+
 st.title("🏭 IFM Maturity Assessment System")
 st.markdown("IFM（Integrated Factory Management）の成熟度自己診断システムです。現状のレベルと将来の目標を可視化します。")
 
@@ -175,17 +188,6 @@ if q_df.empty:
 is_client_access = "survey_id" in st.query_params
 
 if is_client_access:
-    # 顧客配信用リンクでのアクセス時はGitHubリンクやStreamlitメニューを完全隠蔽
-    st.markdown(
-        """
-        <style>
-        header {visibility: hidden; display: none !important;}
-        footer {visibility: hidden; display: none !important;}
-        #MainMenu {visibility: hidden; display: none !important;}
-        </style>
-        """,
-        unsafe_allow_html=True
-    )
     tabs = st.tabs(["📝 アンケート回答入力"])
     tab_input = tabs[0]
     tab_dashboard = None
