@@ -372,11 +372,14 @@ if tab_dashboard:
                 
                 # フィルターオプション用のユニーク値リスト
                 unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
+                unique_surveys = sorted([str(s) for s in resp_df['survey_id'].unique() if s and pd.notna(s)])
                 unique_years = ["すべて", "0～2年", "2～5年", "5～10年", "10～15年", "15年以上"]
                 
                 # フィルター適用関数
-                def filter_data(data, domain, exp, team_kw, category):
+                def filter_data(data, domain, exp, team_kw, category, survey):
                     filtered = data.copy()
+                    if survey != "すべて":
+                        filtered = filtered[filtered['survey_id'] == survey]
                     if domain != "すべて":
                         filtered = filtered[filtered['domain'] == domain]
                     if exp != "すべて":
@@ -396,6 +399,7 @@ if tab_dashboard:
                     
                     with col_filter_a:
                         st.markdown("#### 🔵 グループA の条件")
+                        survey_a = st.selectbox("アンケートID (グループA)", ["すべて"] + unique_surveys, key="survey_a")
                         domain_a = st.selectbox("ドメイン (グループA)", ["すべて"] + unique_domains, key="domain_a")
                         exp_a = st.selectbox("勤続年数 (グループA)", unique_years, key="exp_a")
                         team_a = st.text_input("部署名（部分一致・グループA）", key="team_a", placeholder="例: 技術部")
@@ -403,28 +407,31 @@ if tab_dashboard:
                         
                     with col_filter_b:
                         st.markdown("#### 🟠 グループB の条件")
+                        survey_b = st.selectbox("アンケートID (グループB)", ["すべて"] + unique_surveys, key="survey_b")
                         domain_b = st.selectbox("ドメイン (グループB)", ["すべて"] + unique_domains, key="domain_b")
                         exp_b = st.selectbox("勤続年数 (グループB)", unique_years, key="exp_b")
                         team_b = st.text_input("部署名（部分一致・グループB）", key="team_b", placeholder="例: 建築")
                         cat_b = st.radio("表示カテゴリ (グループB)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_b", horizontal=True)
                         
                     # データのフィルタリング
-                    df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a)
-                    df_b = filter_data(resp_df, domain_b, exp_b, team_b, cat_b)
+                    df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
+                    df_b = filter_data(resp_df, domain_b, exp_b, team_b, cat_b, survey_b)
                     
                 else:
                     # 通常の単一フィルターモード
-                    col_f1, col_f2, col_f3 = st.columns(3)
+                    col_f1, col_f2, col_f3, col_f4 = st.columns(4)
                     with col_f1:
-                        domain_a = st.selectbox("メールアドレスのドメイン", ["すべて"] + unique_domains, key="single_domain")
+                        survey_a = st.selectbox("アンケートID", ["すべて"] + unique_surveys, key="single_survey")
                     with col_f2:
-                        exp_a = st.selectbox("勤続年数", unique_years, key="single_exp")
+                        domain_a = st.selectbox("メールアドレスのドメイン", ["すべて"] + unique_domains, key="single_domain")
                     with col_f3:
+                        exp_a = st.selectbox("勤続年数", unique_years, key="single_exp")
+                    with col_f4:
                         team_a = st.text_input("部署名（部分一致で検索）", key="single_team", placeholder="例: 生産技術")
                         
                     cat_a = st.radio("表示カテゴリ", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="single_cat", horizontal=True)
                     
-                    df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a)
+                    df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
                     df_b = pd.DataFrame() # 空
         
                 # レーダーチャートプロット関数
