@@ -104,3 +104,14 @@ def load_responses_from_firestore():
     except Exception as e:
         st.error(f"Firestore回答ロードエラー: {e}")
         return pd.DataFrame()
+
+def get_all_custom_survey_ids():
+    db = get_firestore_client()
+    if not db:
+        return []
+    try:
+        docs = db.collection("surveys").select(["survey_id"]).stream()
+        return [doc.id for doc in docs]
+    except Exception as e:
+        st.error(f"FirestoreカスタムアンケートID一覧取得エラー: {e}")
+        return []

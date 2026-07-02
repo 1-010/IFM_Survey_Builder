@@ -13,7 +13,8 @@ from db_helper import (
     get_custom_survey,
     save_custom_survey,
     save_response_to_firestore,
-    load_responses_from_firestore
+    load_responses_from_firestore,
+    get_all_custom_survey_ids
 )
 
 # Page Config
@@ -254,7 +255,7 @@ with tab_input:
                     {"レベル": "L4", "定義": row['levels']['L4']},
                     {"レベル": "L5", "定義": row['levels']['L5']}
                 ])
-                st.dataframe(levels_df.set_index("レベル"), use_container_width=True)
+                st.table(levels_df.set_index("レベル"))
                 
                 col1, col2 = st.columns(2)
                 with col1:
@@ -372,7 +373,9 @@ if tab_dashboard:
                 
                 # フィルターオプション用のユニーク値リスト
                 unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
-                unique_surveys = sorted([str(s) for s in resp_df['survey_id'].unique() if s and pd.notna(s)])
+                # Firestoreから発行済みIDを自動ロードしてプルダウンにマージ
+                registered_surveys = get_all_custom_survey_ids()
+                unique_surveys = sorted(list(set([str(s) for s in resp_df['survey_id'].unique() if s and pd.notna(s)] + registered_surveys + ["default"])))
                 unique_years = ["すべて", "0～2年", "2～5年", "5～10年", "10～15年", "15年以上"]
                 
                 # フィルター適用関数
