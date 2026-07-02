@@ -175,6 +175,17 @@ if q_df.empty:
 is_client_access = "survey_id" in st.query_params
 
 if is_client_access:
+    # 顧客配信用リンクでのアクセス時はGitHubリンクやStreamlitメニューを完全隠蔽
+    st.markdown(
+        """
+        <style>
+        header {visibility: hidden; display: none !important;}
+        footer {visibility: hidden; display: none !important;}
+        #MainMenu {visibility: hidden; display: none !important;}
+        </style>
+        """,
+        unsafe_allow_html=True
+    )
     tabs = st.tabs(["📝 アンケート回答入力"])
     tab_input = tabs[0]
     tab_dashboard = None
