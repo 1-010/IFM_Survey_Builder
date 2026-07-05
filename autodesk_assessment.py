@@ -69,7 +69,7 @@ st.markdown(
     
     /* 5. Button Stylings - Contrast & Hierarchy Fixes */
     /* Primary buttons (Yellow Background, Black Text) - strictly for final actions */
-    div.stButton > button[kind="primary"] {
+    div.stButton > button[data-testid="stBaseButton-primary"] {
         background-color: #FFFF00 !important; /* Hello Yellow */
         color: #000000 !important; /* Autodesk Black text */
         border: none !important;
@@ -80,12 +80,12 @@ st.markdown(
         padding: 10px 24px !important;
         transition: all 0.15s ease;
     }
-    div.stButton > button[kind="primary"]:hover {
+    div.stButton > button[data-testid="stBaseButton-primary"]:hover {
         background-color: #E5E500 !important; /* Hover effect */
     }
     
     /* Secondary buttons (Transparent/Black Background, White Text, Slate Border) - for navigation */
-    div.stButton > button[kind="secondary"] {
+    div.stButton > button[data-testid="stBaseButton-secondary"] {
         background-color: #000000 !important;
         color: #FFFFFF !important;
         border: 1px solid #666666 !important; /* Slate border */
@@ -95,7 +95,7 @@ st.markdown(
         padding: 10px 24px !important;
         transition: all 0.15s ease;
     }
-    div.stButton > button[kind="secondary"]:hover {
+    div.stButton > button[data-testid="stBaseButton-secondary"]:hover {
         border-color: #FFFF00 !important; /* Hover outline highlight in Hello Yellow */
         color: #FFFF00 !important;
     }
@@ -419,7 +419,7 @@ with tab_input:
             
             # アセスメント開始ボタン (必須事項が埋まっていない、または同意がない場合は押せない)
             # 送信や開始などの「決定的なアクション」のみに Hello Yellow (Primary) を適用
-            if st.button("自己アセスメントを開始する ➔", kind="primary", disabled=not inputs_valid, use_container_width=True):
+            if st.button("自己アセスメントを開始する ➔", type="primary", disabled=not inputs_valid, use_container_width=True):
                 st.session_state.current_step = 1
                 st.rerun()
                 
@@ -552,17 +552,17 @@ with tab_input:
                 
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # ナビゲーションボタン群 (kind="secondary" にして白枠黒背景に変更、視認性 100% 確保)
+            # ナビゲーションボタン群 (type="secondary" にして白枠黒背景に変更、視認性 100% 確保)
             col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
             with col_btn1:
                 # 前のステップへ戻る (Step 1のときは Step 0 のプロファイル画面に戻る)
-                if st.button("⬅️ 前の画面", kind="secondary", use_container_width=True):
+                if st.button("⬅️ 前の画面", type="secondary", use_container_width=True):
                     st.session_state.current_step -= 1
                     st.rerun()
                     
             with col_btn2:
                 next_disabled = st.session_state.current_step == num_questions
-                if st.button("次の設問 ➡️", kind="secondary", disabled=next_disabled, use_container_width=True):
+                if st.button("次の設問 ➡️", type="secondary", disabled=next_disabled, use_container_width=True):
                     st.session_state.current_step += 1
                     st.rerun()
                     
