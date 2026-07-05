@@ -3,8 +3,18 @@ import streamlit as st
 # 必ず最初に page_config を呼び出す (Streamlitの仕様制限回避)
 st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
 
+# 安全にクエリパラメータを取得（新旧バージョン互換性ハック）
+brand_param = None
+try:
+    brand_param = st.query_params.get("brand")
+except AttributeError:
+    try:
+        brand_param = st.experimental_get_query_params().get("brand", [None])[0]
+    except:
+        pass
+
 # URLクエリに brand=autodesk がある場合は、別インスタンスである Autodesk版へルーティング
-if st.query_params.get("brand") == "autodesk":
+if brand_param == "autodesk":
     import autodesk_assessment
     st.stop()
 

@@ -161,7 +161,15 @@ def load_default_questions():
     return data["questions"]
 
 def get_active_questions():
-    survey_id = st.query_params.get("survey_id")
+    survey_id = None
+    try:
+        survey_id = st.query_params.get("survey_id")
+    except AttributeError:
+        try:
+            survey_id = st.experimental_get_query_params().get("survey_id", [None])[0]
+        except:
+            pass
+            
     if survey_id:
         custom_survey = get_custom_survey(survey_id)
         if custom_survey:
@@ -323,7 +331,14 @@ with col_header_text:
 st.markdown("<hr style='border-color:#1F1F1F; margin-top:10px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
 # Hide Navigation Tabs for Clients
-is_client_access = "survey_id" in st.query_params
+is_client_access = False
+try:
+    is_client_access = "survey_id" in st.query_params
+except AttributeError:
+    try:
+        is_client_access = "survey_id" in st.experimental_get_query_params()
+    except:
+        pass
 
 if is_client_access:
     tabs = st.tabs(["📝 アセスメント回答"])
