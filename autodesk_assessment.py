@@ -17,9 +17,6 @@ from db_helper import (
     get_all_custom_survey_ids
 )
 
-# Page Config
-st.set_page_config(page_title="Autodesk IFM Maturity Assessment", layout="wide")
-
 # Paths
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_JSON = SCRIPT_DIR / "data" / "ifm_questions.json"

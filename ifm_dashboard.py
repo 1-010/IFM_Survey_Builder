@@ -1,5 +1,8 @@
 import streamlit as st
 
+# 必ず最初に page_config を呼び出す (Streamlitの仕様制限回避)
+st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
+
 # URLクエリに brand=autodesk がある場合は、別インスタンスである Autodesk版へルーティング
 if st.query_params.get("brand") == "autodesk":
     import autodesk_assessment
@@ -22,9 +25,6 @@ from db_helper import (
     load_responses_from_firestore,
     get_all_custom_survey_ids
 )
-
-# Page Config
-st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
 
 # アプリ全体でGitHubリンク、フッター、Streamlitメニューを完全隠蔽（不要な露出を防止）
 st.markdown(
