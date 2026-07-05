@@ -324,21 +324,34 @@ def render_hero_image(qid):
         unsafe_allow_html=True
     )
 
-# Brand Header Layout
-col_header_logo, col_header_text = st.columns([1, 8])
-with col_header_logo:
-    logo_svg_path = IMAGES_DIR / "autodesk_logo_white.svg"
-    if logo_svg_path.exists():
-        with open(logo_svg_path, "r", encoding="utf-8") as f:
-            svg_content = f.read()
-        st.markdown(f'<div style="margin-top: 14px; width: 140px;">{svg_content}</div>', unsafe_allow_html=True)
-    else:
-        st.markdown("<h2 style='color:#FFFF00; margin:0;'>AUTODESK</h2>", unsafe_allow_html=True)
-
-with col_header_text:
-    st.markdown("<h1 style='margin:0; font-weight:700;'>IFM Maturity Assessment</h1>", unsafe_allow_html=True)
-
-st.markdown("<hr style='border-color:#666666; margin-top:10px; margin-bottom:20px;'>", unsafe_allow_html=True)
+# Brand Header Layout (一体化したHTMLによる完全な重なり防止 ＆ 1px区切り線)
+logo_svg_path = IMAGES_DIR / "autodesk_logo_white.svg"
+header_html = ""
+if logo_svg_path.exists():
+    with open(logo_svg_path, "r", encoding="utf-8") as f:
+        svg_content = f.read()
+    # SVGロゴ + 縦の区切り線 + タイトルをフレックスボックスで一列配置
+    header_html = f"""
+    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 20px; margin-top: 10px; margin-bottom: 15px;">
+        <div style="width: 140px; display: flex; align-items: center;">{svg_content}</div>
+        <div style="height: 28px; width: 1px; background-color: #666666;"></div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em; padding-top: 2px;">
+            IFM Maturity Assessment
+        </div>
+    </div>
+    """
+else:
+    header_html = """
+    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 20px; margin-top: 10px; margin-bottom: 15px;">
+        <div style="font-size: 1.5rem; font-weight: 900; color: #FFFF00; letter-spacing: 0.05em;">AUTODESK</div>
+        <div style="height: 28px; width: 1px; background-color: #666666;"></div>
+        <div style="font-size: 1.5rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em;">
+            IFM Maturity Assessment
+        </div>
+    </div>
+    """
+st.markdown(header_html, unsafe_allow_html=True)
+st.markdown("<hr style='border-color:#666666; margin-top:0px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
 # Hide Navigation Tabs for Clients
 is_client_access = False
@@ -500,14 +513,15 @@ with tab_input:
         if plot_categories:
             fig = go.Figure()
             # Functional Colors: Twilight Blue (#1D91D0) for As-Is, Morning Green (#2AD0A9) for To-Be
+            # Ultra-clean holographic stylings (opacity and thin line)
             fig.add_trace(go.Scatterpolar(
                 r=plot_asis + [plot_asis[0]],
                 theta=plot_categories + [plot_categories[0]],
                 fill='toself',
                 name='現在の評価 (As-Is)',
                 line_color='#1D91D0',
-                fillcolor='rgba(29, 145, 208, 0.15)',
-                line=dict(width=2),
+                fillcolor='rgba(29, 145, 208, 0.08)',
+                line=dict(width=1.5),
                 opacity=0.7
             ))
             fig.add_trace(go.Scatterpolar(
@@ -516,8 +530,8 @@ with tab_input:
                 fill='toself',
                 name='将来の目標 (To-Be)',
                 line_color='#2AD0A9',
-                fillcolor='rgba(42, 208, 169, 0.08)',
-                line=dict(width=1.5, dash='dash'),
+                fillcolor='rgba(42, 208, 169, 0.04)',
+                line=dict(width=1.2, dash='dash'),
                 opacity=0.5
             ))
             
@@ -527,34 +541,37 @@ with tab_input:
                         visible=True,
                         range=[0, 5],
                         tickvals=[1, 2, 3, 4, 5],
-                        gridcolor='#232323',
-                        linecolor='#232323',
-                        tickfont=dict(color='#D5D5CB', size=9)
+                        gridcolor='rgba(102, 102, 102, 0.15)',
+                        linecolor='rgba(102, 102, 102, 0.2)',
+                        tickfont=dict(color='#666666', size=8)
                     ),
                     angularaxis=dict(
-                        gridcolor='#232323',
-                        linecolor='#232323',
-                        tickfont=dict(color='#FFFFFF', size=9)
+                        gridcolor='rgba(102, 102, 102, 0.15)',
+                        linecolor='rgba(102, 102, 102, 0.2)',
+                        tickfont=dict(color='#D5D5CB', size=8.5, family='Inter')
                     ),
-                    bgcolor='#0A0A0A'
+                    bgcolor='rgba(0,0,0,0)'
                 ),
                 showlegend=True,
                 legend=dict(
                     orientation="h",
                     yanchor="bottom",
-                    y=-0.22,
+                    y=-0.28,
                     xanchor="center",
                     x=0.5,
-                    font=dict(color='#FFFFFF', size=10)
+                    font=dict(color='#D5D5CB', size=10)
                 ),
-                paper_bgcolor='#000000',
-                margin=dict(l=50, r=50, t=10, b=40)
+                paper_bgcolor='rgba(0,0,0,0)',
+                plot_bgcolor='rgba(0,0,0,0)',
+                margin=dict(l=60, r=60, t=20, b=40)
             )
             st.plotly_chart(fig, use_container_width=True)
             
             answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
+            
+            # Subtle Progress indicators
             st.progress(answered_count / num_questions)
-            st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#D5D5CB; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
     if submit_clicked:
         if not respondent_name.strip():
@@ -702,7 +719,8 @@ if tab_dashboard:
                         fill='toself',
                         name='グループA: 現状の評価',
                         line_color='#1D91D0',
-                        fillcolor='rgba(29, 145, 208, 0.2)'
+                        fillcolor='rgba(29, 145, 208, 0.1)',
+                        line=dict(width=1.5)
                     ))
                     fig.add_trace(go.Scatterpolar(
                         r=agg_a['to_be'].tolist() + [agg_a['to_be'].tolist()[0]],
@@ -710,9 +728,10 @@ if tab_dashboard:
                         fill='toself',
                         name='グループA: 将来の目標',
                         line_color='#2AD0A9',
-                        fillcolor='rgba(42, 208, 169, 0.1)'
+                        fillcolor='rgba(42, 208, 169, 0.05)',
+                        line=dict(width=1.2, dash='dash')
                     ))
-                    
+                
                 if compare_mode and not df_b.empty:
                     agg_b = df_b.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
                     agg_b = agg_b.sort_values('question_id')
@@ -722,18 +741,31 @@ if tab_dashboard:
                             theta=theta_labels + [theta_labels[0]],
                             fill='toself',
                             name='グループB: 現状の評価',
-                            line_color='#F2520A', # Functional Tertiary Color Dusk
-                            fillcolor='rgba(242, 82, 10, 0.2)'
+                            line_color='#F2520A',
+                            fillcolor='rgba(242, 82, 10, 0.1)',
+                            line=dict(width=1.5)
                         ))
                 
                 fig.update_layout(
                     polar=dict(
-                        radialaxis=dict(visible=True, range=[0, 5], gridcolor='#232323'),
-                        angularaxis=dict(gridcolor='#232323', tickfont=dict(color='#D5D5CB')),
-                        bgcolor='#0A0A0A'
+                        radialaxis=dict(
+                            visible=True, 
+                            range=[0, 5], 
+                            gridcolor='rgba(102, 102, 102, 0.15)',
+                            linecolor='rgba(102, 102, 102, 0.2)',
+                            tickfont=dict(color='#666666', size=8)
+                        ),
+                        angularaxis=dict(
+                            gridcolor='rgba(102, 102, 102, 0.15)',
+                            linecolor='rgba(102, 102, 102, 0.2)',
+                            tickfont=dict(color='#D5D5CB', size=8.5, family='Inter')
+                        ),
+                        bgcolor='rgba(0,0,0,0)'
                     ),
-                    paper_bgcolor='#000000',
-                    font=dict(color='#FFFFFF')
+                    paper_bgcolor='rgba(0,0,0,0)',
+                    plot_bgcolor='rgba(0,0,0,0)',
+                    font=dict(color='#FFFFFF'),
+                    margin=dict(l=60, r=60, t=20, b=40)
                 )
                 st.plotly_chart(fig, use_container_width=True)
         else:
