@@ -7,6 +7,10 @@ from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
 import re
+import os
+import tempfile
+from fpdf import FPDF
+import urllib.request
 
 # Import Firestore helpers
 from db_helper import (
@@ -211,6 +215,109 @@ st.markdown(
     """,
     unsafe_allow_html=True
 )
+
+# FPDF日本語フォント自動解決＆PDF出力エンジン
+def generate_pdf_report_bytes(res_name, res_email, res_team, res_exp, answers_list, gaps_sorted, proposals_dict, survey_title):
+    font_path = os.path.join(tempfile.gettempdir(), "NotoSansJP-Regular.ttf")
+    if not os.path.exists(font_path):
+        try:
+            url = "https://github.com/shindome/noto-emoji-jp/raw/master/fonts/NotoSansJP-Regular.ttf"
+            urllib.request.urlretrieve(url, font_path)
+        except:
+            pass
+            
+    pdf = FPDF()
+    pdf.add_page()
+    
+    if os.path.exists(font_path):
+        pdf.add_font("NotoSansJP", "", font_path)
+        pdf.set_font("NotoSansJP", size=10)
+    else:
+        pdf.set_font("Helvetica", size=10)
+        
+    # Title Header (Black Autodesk Banner)
+    pdf.set_fill_color(0, 0, 0)
+    pdf.rect(0, 0, 210, 42, "F")
+    
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("NotoSansJP", size=15)
+    pdf.text(15, 20, "AUTODESK SOLUTION ASSESSMENT REPORT")
+    pdf.set_font("NotoSansJP", size=10)
+    pdf.text(15, 30, f"{survey_title} - 診断結果レポート")
+    
+    # Client Info Block
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_fill_color(245, 245, 242)
+    pdf.rect(15, 50, 180, 30, "F")
+    pdf.set_font("NotoSansJP", size=9)
+    pdf.text(20, 57, f"回答者氏名: {res_name} 様")
+    pdf.text(20, 64, f"部署・チーム: {res_team if res_team else '未登録'}")
+    pdf.text(20, 71, f"連絡先メール: {res_email}  (経験年数: {res_exp})")
+    
+    # Gap analysis Table
+    pdf.set_font("NotoSansJP", size=11)
+    pdf.text(15, 95, "アセスメント評価 Gap 分析")
+    
+    pdf.line(15, 99, 195, 99)
+    pdf.set_font("NotoSansJP", size=8.5)
+    pdf.text(17, 104, "設問ID")
+    pdf.text(32, 104, "評価カテゴリ / フェーズ")
+    pdf.text(125, 104, "As-Is (現状)")
+    pdf.text(150, 104, "To-Be (目標)")
+    pdf.text(175, 104, "Gap (乖離)")
+    pdf.line(15, 107, 195, 107)
+    
+    y = 113
+    for a in answers_list:
+        pdf.text(17, y, str(a["question_id"]))
+        pdf.text(32, y, f"{a['phase']} ({a['department']})")
+        pdf.text(133, y, str(a["as_is"]))
+        pdf.text(158, y, str(a["to_be"]))
+        
+        gap_val = 0
+        if a["as_is"] != "N/A" and a["to_be"] != "N/A":
+            gap_val = int(a["to_be"]) - int(a["as_is"])
+            
+        pdf.text(180, y, str(gap_val) if a["as_is"] != "N/A" else "N/A")
+        y += 7
+        
+    pdf.line(15, y-2, 195, y-2)
+    
+    # Proposal Section
+    pdf.ln(y - 95 + 10)
+    pdf.set_font("NotoSansJP", size=11)
+    pdf.cell(0, 10, "推奨 Autodesk ソリューションのご提案", ln=True)
+    pdf.ln(2)
+    
+    display_count = 0
+    for gap_item in gaps_sorted:
+        qid = gap_item["question_id"]
+        if qid in proposals_dict and gap_item["gap"] >= 1:
+            prop = proposals_dict[qid]
+            pdf.set_font("NotoSansJP", size=10)
+            pdf.set_text_color(255, 120, 0)
+            pdf.cell(0, 6, f"■ {prop['title']}", ln=True)
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font("NotoSansJP", size=8.5)
+            pdf.multi_cell(180, 5, prop["desc"])
+            pdf.set_text_color(29, 145, 208)
+            pdf.cell(0, 5, f"製品詳細リンク: {prop['url']}", ln=True)
+            pdf.ln(4)
+            display_count += 1
+            if display_count >= 2:
+                break
+                
+    if display_count == 0:
+        pdf.set_font("NotoSansJP", size=10)
+        pdf.set_text_color(255, 120, 0)
+        pdf.cell(0, 6, "■ Autodesk Tandem", ln=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("NotoSansJP", size=8.5)
+        pdf.multi_cell(180, 5, "設備管理デジタルツインプラットフォームをご検討ください。BIMモデルやアセット情報、リアルタイムIoTデータを連携し、効率的な建物維持管理プロセスを実現します。")
+        pdf.set_text_color(29, 145, 208)
+        pdf.cell(0, 5, "製品詳細リンク: https://www.autodesk.com/products/tandem/overview", ln=True)
+        
+    return pdf.output()
 
 # Load Questions
 def load_all_questions_json():
@@ -455,12 +562,22 @@ with tab_input:
             
             # 各設問のGap分析
             gaps = []
+            answers_list_for_pdf = []
             for _, r in q_df.iterrows():
                 qid = r['question_id']
                 is_skipped = st.session_state.get(f"skip_{qid}", False)
+                as_is = st.session_state.get(f"asis_{qid}", 2) if not is_skipped else "N/A"
+                to_be = st.session_state.get(f"tobe_{qid}", 4) if not is_skipped else "N/A"
+                
+                answers_list_for_pdf.append({
+                    "question_id": qid,
+                    "phase": r["phase"],
+                    "department": r["department"],
+                    "as_is": as_is,
+                    "to_be": to_be
+                })
+                
                 if not is_skipped:
-                    as_is = st.session_state.get(f"asis_{qid}", 2)
-                    to_be = st.session_state.get(f"tobe_{qid}", 4)
                     gaps.append({
                         "question_id": qid,
                         "phase": r['phase'],
@@ -559,8 +676,30 @@ with tab_input:
                     """,
                     unsafe_allow_html=True
                 )
-                
-            if st.button("アセスメントを再回答する", type="secondary"):
+            
+            # PDF診断書ダウンロードボタンの実装
+            with st.spinner("PDFレポートを準備中..."):
+                pdf_data = generate_pdf_report_bytes(
+                    res_name=st.session_state.get("res_name", "テスト回答者"),
+                    res_email=st.session_state.get("res_email", "info@autodesk.com"),
+                    res_team=st.session_state.get("res_team", "未設定"),
+                    res_exp=st.session_state.get("res_exp", "未設定"),
+                    answers_list=answers_list_for_pdf,
+                    gaps_sorted=gaps_sorted,
+                    proposals_dict=PRODUCT_PROPOSALS,
+                    survey_title="アセスメント"
+                )
+            
+            st.download_button(
+                label="診断結果レポート (PDF) をダウンロード",
+                data=pdf_data,
+                file_name=f"Autodesk_Assessment_Report_{active_survey_id}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+            
+            st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+            if st.button("アセスメントを再回答する", type="secondary", use_container_width=True):
                 st.session_state.is_submitted = False
                 st.session_state.current_step = 0
                 st.rerun()
@@ -1056,6 +1195,106 @@ if tab_dashboard:
                     margin=dict(l=60, r=60, t=20, b=40)
                 )
                 st.plotly_chart(fig, use_container_width=True)
+                
+                # 組織内認識ギャップ分析セクションの追加
+                st.markdown("<hr style='border-color:#333333; margin:25px 0;'>", unsafe_allow_html=True)
+                st.subheader("組織内・認識の歪み（ギャップ）分析")
+                
+                if len(df_a['email'].unique()) < 2:
+                    st.info("※ このアンケートIDに対する複数回答データが不足しています。組織内ギャップ分析を行うには2名以上の回答が必要です。")
+                else:
+                    st.markdown("<p style='font-size:0.92rem; color:#D5D5CB; margin-bottom:15px;'>同じアンケートIDに対する複数名の回答から、現場層（勤続年数5年未満）と意思決定層（勤続年数10年以上）の間の【認識ギャップ】を抽出します。</p>", unsafe_allow_html=True)
+                    
+                    # 現場層データ (勤続5年未満)
+                    genba_df = df_a[df_a['experience_years'].isin(["0～2年", "2～5年"])]
+                    # マネジメント層データ (勤続10年以上)
+                    mgmt_df = df_a[df_a['experience_years'].isin(["10～15年", "15年以上"])]
+                    
+                    agg_genba = genba_df.groupby(['question_id', 'phase'])['as_is'].mean().reset_index().sort_values('question_id')
+                    agg_mgmt = mgmt_df.groupby(['question_id', 'phase'])['as_is'].mean().reset_index().sort_values('question_id')
+                    
+                    fig_gap = go.Figure()
+                    
+                    if not agg_genba.empty:
+                        fig_gap.add_trace(go.Scatterpolar(
+                            r=agg_genba['as_is'].tolist() + [agg_genba['as_is'].tolist()[0]],
+                            theta=theta_labels + [theta_labels[0]],
+                            fill='toself',
+                            name='現場担当層 (勤続5年未満) - As-Is',
+                            line_color='#2AD0A9',
+                            fillcolor='rgba(42, 208, 169, 0.04)',
+                            line=dict(width=1.5)
+                        ))
+                        
+                    if not agg_mgmt.empty:
+                        fig_gap.add_trace(go.Scatterpolar(
+                            r=agg_mgmt['as_is'].tolist() + [agg_mgmt['as_is'].tolist()[0]],
+                            theta=theta_labels + [theta_labels[0]],
+                            fill='toself',
+                            name='意思決定層 (勤続10年以上) - As-Is',
+                            line_color='#FFFF00',
+                            fillcolor='rgba(255, 255, 0, 0.04)',
+                            line=dict(width=1.5)
+                        ))
+                        
+                    fig_gap.update_layout(
+                        polar=dict(
+                            radialaxis=dict(
+                                visible=True, 
+                                range=[0, 5], 
+                                tickvals=[1, 2, 3, 4, 5],
+                                gridcolor='rgba(102, 102, 102, 0.15)',
+                                linecolor='rgba(102, 102, 102, 0.2)',
+                                tickfont=dict(color='#666666', size=8)
+                            ),
+                            angularaxis=dict(
+                                gridcolor='rgba(102, 102, 102, 0.15)',
+                                linecolor='rgba(102, 102, 102, 0.2)',
+                                tickfont=dict(color='#D5D5CB', size=8.5)
+                            ),
+                            bgcolor='rgba(0,0,0,0)'
+                        ),
+                        paper_bgcolor='rgba(0,0,0,0)',
+                        plot_bgcolor='rgba(0,0,0,0)',
+                        font=dict(color='#FFFFFF'),
+                        margin=dict(l=60, r=60, t=20, b=40)
+                    )
+                    
+                    col_g1, col_g2 = st.columns([10, 8])
+                    with col_g1:
+                        st.plotly_chart(fig_gap, use_container_width=True)
+                    with col_g2:
+                        st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-bottom:10px;'>🚨 組織内認識不一致度アラート</h5>", unsafe_allow_html=True)
+                        
+                        # ギャップ算出
+                        gap_details = []
+                        for q in df_a['question_id'].unique():
+                            val_genba = genba_df[genba_df['question_id'] == q]['as_is'].mean()
+                            val_mgmt = mgmt_df[mgmt_df['question_id'] == q]['as_is'].mean()
+                            
+                            if pd.notna(val_genba) and pd.notna(val_mgmt):
+                                diff = abs(val_mgmt - val_genba)
+                                phase_name = df_a[df_a['question_id'] == q]['phase'].iloc[0]
+                                gap_details.append({"qid": q, "phase": phase_name, "diff": diff, "genba": val_genba, "mgmt": val_mgmt})
+                                
+                        gap_details_sorted = sorted(gap_details, key=lambda x: x["diff"], reverse=True)
+                        
+                        if gap_details_sorted:
+                            display_err_count = 0
+                            for i, item in enumerate(gap_details_sorted[:3]):
+                                if item["diff"] >= 0.5:
+                                    st.markdown(
+                                        f"<div style='background-color:#121212; padding:10px 14px; border-left:3px solid #FF5252; margin-bottom:8px;'>"
+                                        f"<b style='color:#FF5252;'>不一致度 第{i+1}位: {item['qid']} ({item['phase']})</b><br>"
+                                        f"<span style='font-size:0.82rem; color:#D5D5CB;'>意思決定層 平均: <b>{item['mgmt']:.1f}</b> / 現場層 平均: <b>{item['genba']:.1f}</b> (乖離: {item['diff']:.1f})</span>"
+                                        f"</div>",
+                                        unsafe_allow_html=True
+                                    )
+                                    display_err_count += 1
+                            if display_err_count == 0:
+                                st.write("現場層と意思決定層の認識はほぼ完全に一致しており、足並みが綺麗に揃っています。")
+                        else:
+                            st.write("各回答者層におけるデータが不足しています。")
         else:
             if dash_pw != "":
                 st.error("パスワードが正しくありません。")
@@ -1164,6 +1403,122 @@ if tab_admin:
                         st.code(prod_url, language=None)
                         st.info("テスト用リンク (ローカル環境):")
                         st.code(local_url, language=None)
+            
+            # 最新の回答データを取得してレコメンドを表示するセクション
+            st.markdown("---")
+            st.subheader("4. 最新アセスメント回答通知 ＆ AIセールスレコメンド")
+            
+            # Firestoreから全回答をロード
+            resp_df_all = load_responses_from_firestore()
+            if resp_df_all.empty:
+                st.info("まだ回答データが存在しません。")
+            else:
+                # 最も新しいタイムスタンプを取得
+                latest_ts = resp_df_all['timestamp'].max()
+                
+                # そのタイムスタンプを持つ回答者の一連の回答行を抽出
+                latest_rows = resp_df_all[resp_df_all['timestamp'] == latest_ts]
+                
+                if not latest_rows.empty:
+                    # 代表情報を取得
+                    first_row = latest_rows.iloc[0]
+                    res_name = first_row.get("respondent", "匿名")
+                    res_team = first_row.get("team", "部署未設定")
+                    res_email = first_row.get("email", "なし")
+                    res_sid = first_row.get("survey_id", "default")
+                    
+                    formatted_ts = str(latest_ts).replace("T", " ")[:19]
+                    
+                    # アンケートタイプの判定
+                    qids = latest_rows['question_id'].tolist()
+                    survey_type_lbl = "設備管理成熟度診断 (IFM)"
+                    if any(str(q).startswith("FC") for q in qids):
+                        survey_type_lbl = "工場設計・プロダクトクラウド適性診断"
+                    elif any(str(q).startswith("AE") for q in qids):
+                        survey_type_lbl = "建築設計・施工 BIM適性診断"
+                    elif any(str(q).startswith("CI") for q in qids):
+                        survey_type_lbl = "土木・インフラ CIM適性診断"
+                    elif any(str(q).startswith("MF") for q in qids):
+                        survey_type_lbl = "製品設計・開発 デジタル適性診断"
+                        
+                    st.markdown(
+                        f"""
+                        <div style='background-color:#121212; padding:15px; border-left:4px solid #FFFF00; border-radius:4px; margin-bottom:15px;'>
+                            <span style='background-color:#FFFF00; color:#000000; font-size:0.75rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>REALTIME ALERT</span>
+                            <b>{res_name} 様 ({res_team}) がアセスメントを完了しました！</b><br>
+                            <span style='font-size:0.85rem; color:#8C9BA5;'>回答時刻: {formatted_ts}  ·  対象モデル: {survey_type_lbl}  ·  アンケートID: {res_sid}  ·  連絡先: {res_email}</span>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    
+                    # Gap計算
+                    gaps = []
+                    for _, row in latest_rows.iterrows():
+                        as_is_val = row.get("as_is")
+                        to_be_val = row.get("to_be")
+                        if pd.notna(as_is_val) and pd.notna(to_be_val):
+                            gap_val = int(to_be_val) - int(as_is_val)
+                            gaps.append({
+                                "qid": row.get("question_id"),
+                                "phase": row.get("phase"),
+                                "gap": gap_val,
+                                "to_be": int(to_be_val)
+                            })
+                            
+                    gaps_sorted = sorted(gaps, key=lambda x: (x["gap"], x["to_be"]), reverse=True)
+                    
+                    if gaps_sorted:
+                        top_gap = gaps_sorted[0]
+                        # AI推奨アプローチ・セールストークロジック
+                        recommendations_map = {
+                            # Factory Cloud
+                            "FC01": "Formaによる敷地風向・日影解析デモをオファーし、『初期計画段階でのAI迅速シミュレーションによる手戻り削減』をフックにアプローチしてください。",
+                            "FC02": "FlexSimによる工程シミュレーションデモを提案。『時間軸を考慮した設備能力と搬送ルートの最適化』をアピールして、工場部門への商談を開始してください。",
+                            "FC03": "Factory Design Utilities (FDU) を紹介。『AutoCADとInventorの2D/3D双方向同期による干渉チェック』が最も響くアプローチです。",
+                            "FC04": "AIモデリング（Navastoなど）やジェネレーティブデザインの紹介スライドを持参し、設計プロセスの自律化を切り口に会話を展開してください。",
+                            "FC05": "AutoCAD専用ツールセットやAPI/LISPによる作図・BOM出力の『定型業務自動化』をフックにし、開発期間の圧縮を提案してください。",
+                            "FC06": "Autodesk Construction Cloud (ACC) CDEによる『サプライヤとの安全なリアルタイム3Dモデル共有・整合性維持』をテーマに会話を構築してください。",
+                            "FC07": "FlexSim VRを用いた『バーチャル工場内覧会・VR役員合意形成』のデモを提案し、意思決定の迅速化を支援してください。",
+                            "FC08": "Inventor iLogicを活用した『パラメータ駆動型設計の自動化・仕様変更に伴う図面自動更新』の自動化導入ワークショップを提案してください。",
+                            # AEC BIM
+                            "AE01": "Autodesk Formaを用いた環境シミュレーションを提案。初期段階で騒音や日影の風向問題を秒速で解決する事例が刺さります。",
+                            "AE02": "Revitの3D BIM設計への移行支援プログラムをオファー。2Dから3Dへの移行に伴う図面の一貫性確保が最大のセールスポイントです。",
+                            "AE03": "Navisworksによる複数領域データの重ね合わせ・自動干渉検出のデモを提案し、現場施工段階の手戻り削減効果を訴求してください。",
+                            "AE04": "ACC Docs/Design CollaborateによるISO 19650準拠のクラウドCDEコラボレーションの価値、データ紛失防止を提案してください。",
+                            "AE05": "ACC Takeoffを用いた3D/2D統合数量算出による見積の高速化・高精度化のソリューション資料をオファーしてください。",
+                            "AE06": "ACC Buildを用いた現場デジタル施工管理（モバイルでの図面閲覧や指摘管理）を提案し、現場監督の直行直帰促進をアピールしてください。",
+                            "AE07": "Navisworks 4D工程シミュレーションにより、工期遅延リスクを3Dビジュアルで事前に洗い出す検証デモをオファーしてください。",
+                            "AE08": "Autodesk Tandemを用いたデジタルツイン竣工FMデータ構築プログラムを提案。スマートビルディング化への道筋を示してください。",
+                            # Civil CIM
+                            "CI01": "InfraWorksによる広域CIM地形モデル構築のデモを提案。現況地形と道路設計の3Dビジュアルでの比較検証を訴求してください。",
+                            "CI02": "Civil 3DによるCIM道路線形設計・パラメトリック法面展開の自動更新デモを提案し、設計変更への耐性をアピールしてください。",
+                            "CI03": "Revit構造物（橋梁等）とCivil 3D道路線形の動的同期による干渉チェック＆座標自動補正デモが極めて有効です。",
+                            "CI04": "Civil 3Dサーフェス比較を用いた高精度土量計算と、切盛土バランスの自動最適化ツールをフックに提案してください。",
+                            "CI05": "ACC Collaboration for Civil 3Dによる大容量地形点群と線形データの安全なチーム間共有手法をテーマにオファーしてください。",
+                            "CI06": "InfraWorksを用いた発注者や住民向け説明用のCIM 3Dビジュアル合意形成パッケージをオファーしてください。",
+                            "CI07": "ReCap Proによるドローン点群からの地形面抽出・Civil 3D地形サーフェス化によるi-Construction出来形管理を提案してください。",
+                            "CI08": "Civil 3DとTandemを組み合わせたCIM電子納品対応・維持管理データベース移行自動化ワークフローを提案してください。",
+                            # MFG PDM
+                            "MF01": "Inventor詳細設計とBOM（部品構成表）の完全連動デモを提案し、BOMの手入力ミスや不整合削減を訴求してください。",
+                            "MF02": "Inventor Nastranによる設計段階での強度・熱応力FEA解析デモを提案。試作手戻りの劇的削減をアピールしてください。",
+                            "MF03": "VaultによるPDMデータ管理（リビジョン管理・承認フロー自動統制・重複設計の防止）のデモ・体験会をオファーしてください。",
+                            "MF04": "Autodesk Fusionクラウド共有機能による、取引先や製造現場との即時3D設計レビュー、変更箇所の可視化を提案してください。",
+                            "MF05": "Fusion Generative Design（AIによる軽量最適形状の自動生成）を活用した製品軽量化の事例展示・検証会を提案してください。",
+                            "MF06": "Fusion CAMを用いたCAD/CAM完全統合による加工NCデータ作成と、設計変更時のパス自動再計算デモを提案してください。",
+                            "MF07": "Inventor iLogicを用いたアセンブリ・図面のパラメータ自動構成ルール作成ワークショップをオファーしてください。",
+                            "MF08": "Fusion ECADによる基板設計とMCAD（筐体設計）のリアルタイムオンライン3D干渉検証機能をフックにアピールしてください。"
+                        }
+                        
+                        recommend_text = recommendations_map.get(
+                            top_gap["qid"],
+                            "お客様の最大の課題箇所に対し、最適なAutodesk製品のデモ、または製品統合パッケージ（AEC Collection / PDMC）のご紹介ワークショップをオファーしてください。"
+                        )
+                        
+                        st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-top:15px; margin-bottom:5px;'>💡 AI推奨セールストーク ＆ 提案シナリオ</h5>", unsafe_allow_html=True)
+                        st.info(f"👉 **アプローチの切り口 (最大課題: {top_gap['qid']} [{top_gap['phase']}] - Gap: {top_gap['gap']})**\n\n{recommend_text}")
+                    else:
+                        st.write("回答データに有効なGapが存在しません。全体の成熟度は非常に高い状況です。")
         else:
             if admin_pw != "":
                 st.error("パスワードが正しくありません。")

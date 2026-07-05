@@ -7,6 +7,10 @@ from datetime import datetime
 import gspread
 from google.oauth2.service_account import Credentials
 import re
+import os
+import tempfile
+from fpdf import FPDF
+import urllib.request
 
 # Import Firestore helpers
 from db_helper import (
@@ -177,6 +181,109 @@ st.markdown(
     unsafe_allow_html=True
 )
 
+# FPDF日本語フォント自動解決＆PDF出力エンジン
+def generate_pdf_report_bytes(res_name, res_email, res_team, res_exp, answers_list, gaps_sorted, proposals_dict, survey_title):
+    font_path = os.path.join(tempfile.gettempdir(), "NotoSansJP-Regular.ttf")
+    if not os.path.exists(font_path):
+        try:
+            url = "https://github.com/shindome/noto-emoji-jp/raw/master/fonts/NotoSansJP-Regular.ttf"
+            urllib.request.urlretrieve(url, font_path)
+        except:
+            pass
+            
+    pdf = FPDF()
+    pdf.add_page()
+    
+    if os.path.exists(font_path):
+        pdf.add_font("NotoSansJP", "", font_path)
+        pdf.set_font("NotoSansJP", size=10)
+    else:
+        pdf.set_font("Helvetica", size=10)
+        
+    # Title Header (Black Autodesk Banner)
+    pdf.set_fill_color(0, 0, 0)
+    pdf.rect(0, 0, 210, 42, "F")
+    
+    pdf.set_text_color(255, 255, 255)
+    pdf.set_font("NotoSansJP", size=15)
+    pdf.text(15, 20, "AUTODESK SOLUTION ASSESSMENT REPORT")
+    pdf.set_font("NotoSansJP", size=10)
+    pdf.text(15, 30, f"{survey_title} - 診断結果レポート")
+    
+    # Client Info Block
+    pdf.set_text_color(0, 0, 0)
+    pdf.set_fill_color(245, 245, 242)
+    pdf.rect(15, 50, 180, 30, "F")
+    pdf.set_font("NotoSansJP", size=9)
+    pdf.text(20, 57, f"回答者氏名: {res_name} 様")
+    pdf.text(20, 64, f"部署・チーム: {res_team if res_team else '未登録'}")
+    pdf.text(20, 71, f"連絡先メール: {res_email}  (経験年数: {res_exp})")
+    
+    # Gap analysis Table
+    pdf.set_font("NotoSansJP", size=11)
+    pdf.text(15, 95, "アセスメント評価 Gap 分析")
+    
+    pdf.line(15, 99, 195, 99)
+    pdf.set_font("NotoSansJP", size=8.5)
+    pdf.text(17, 104, "設問ID")
+    pdf.text(32, 104, "評価カテゴリ / フェーズ")
+    pdf.text(125, 104, "As-Is (現状)")
+    pdf.text(150, 104, "To-Be (目標)")
+    pdf.text(175, 104, "Gap (乖離)")
+    pdf.line(15, 107, 195, 107)
+    
+    y = 113
+    for a in answers_list:
+        pdf.text(17, y, str(a["question_id"]))
+        pdf.text(32, y, f"{a['phase']} ({a['department']})")
+        pdf.text(133, y, str(a["as_is"]))
+        pdf.text(158, y, str(a["to_be"]))
+        
+        gap_val = 0
+        if a["as_is"] != "N/A" and a["to_be"] != "N/A":
+            gap_val = int(a["to_be"]) - int(a["as_is"])
+            
+        pdf.text(180, y, str(gap_val) if a["as_is"] != "N/A" else "N/A")
+        y += 7
+        
+    pdf.line(15, y-2, 195, y-2)
+    
+    # Proposal Section
+    pdf.ln(y - 95 + 10)
+    pdf.set_font("NotoSansJP", size=11)
+    pdf.cell(0, 10, "推奨 Autodesk ソリューションのご提案", ln=True)
+    pdf.ln(2)
+    
+    display_count = 0
+    for gap_item in gaps_sorted:
+        qid = gap_item["question_id"]
+        if qid in proposals_dict and gap_item["gap"] >= 1:
+            prop = proposals_dict[qid]
+            pdf.set_font("NotoSansJP", size=10)
+            pdf.set_text_color(255, 120, 0)
+            pdf.cell(0, 6, f"■ {prop['title']}", ln=True)
+            pdf.set_text_color(0, 0, 0)
+            pdf.set_font("NotoSansJP", size=8.5)
+            pdf.multi_cell(180, 5, prop["desc"])
+            pdf.set_text_color(29, 145, 208)
+            pdf.cell(0, 5, f"製品詳細リンク: {prop['url']}", ln=True)
+            pdf.ln(4)
+            display_count += 1
+            if display_count >= 2:
+                break
+                
+    if display_count == 0:
+        pdf.set_font("NotoSansJP", size=10)
+        pdf.set_text_color(255, 120, 0)
+        pdf.cell(0, 6, "■ Autodesk Product Design & Manufacturing Collection (PDMC)", ln=True)
+        pdf.set_text_color(0, 0, 0)
+        pdf.set_font("NotoSansJP", size=8.5)
+        pdf.multi_cell(180, 5, "全体的な成熟度はすでに素晴らしい高水準にあります。AutoCAD、Inventor、Vault、Fusionを網羅したPDMCパッケージにより、設計・開発・製造までの全プロセスを高度化できます。")
+        pdf.set_text_color(29, 145, 208)
+        pdf.cell(0, 5, "製品詳細リンク: https://www.autodesk.com/collections/product-design-manufacturing/overview", ln=True)
+        
+    return pdf.output()
+
 # Load MFG Questions
 def get_mfg_questions():
     survey_id = None
@@ -310,12 +417,22 @@ with tabs[0]:
             
             # Gap分析
             gaps = []
+            answers_list_for_pdf = []
             for _, r in q_df.iterrows():
                 qid = r['question_id']
                 is_skipped = st.session_state.get(f"skip_{qid}", False)
+                as_is = st.session_state.get(f"asis_{qid}", 2) if not is_skipped else "N/A"
+                to_be = st.session_state.get(f"tobe_{qid}", 4) if not is_skipped else "N/A"
+                
+                answers_list_for_pdf.append({
+                    "question_id": qid,
+                    "phase": r["phase"],
+                    "department": r["department"],
+                    "as_is": as_is,
+                    "to_be": to_be
+                })
+                
                 if not is_skipped:
-                    as_is = st.session_state.get(f"asis_{qid}", 2)
-                    to_be = st.session_state.get(f"tobe_{qid}", 4)
                     gaps.append({
                         "question_id": qid,
                         "gap": to_be - as_is,
@@ -398,7 +515,29 @@ with tabs[0]:
                     unsafe_allow_html=True
                 )
                 
-            if st.button("アセスメントを再回答する", type="secondary"):
+            # PDF診断書ダウンロードボタンの実装
+            with st.spinner("PDFレポートを準備中..."):
+                pdf_data = generate_pdf_report_bytes(
+                    res_name=st.session_state.get("res_name", "テスト回答者"),
+                    res_email=st.session_state.get("res_email", "info@autodesk.com"),
+                    res_team=st.session_state.get("res_team", "未設定"),
+                    res_exp=st.session_state.get("res_exp", "未設定"),
+                    answers_list=answers_list_for_pdf,
+                    gaps_sorted=gaps_sorted,
+                    proposals_dict=PRODUCT_PROPOSALS,
+                    survey_title="製品設計・開発 デジタル適性診断"
+                )
+            
+            st.download_button(
+                label="診断結果レポート (PDF) をダウンロード",
+                data=pdf_data,
+                file_name=f"Autodesk_MFG_Report_{active_survey_id}.pdf",
+                mime="application/pdf",
+                use_container_width=True
+            )
+            
+            st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+            if st.button("アセスメントを再回答する", type="secondary", use_container_width=True):
                 st.session_state.is_submitted = False
                 st.session_state.current_step = 0
                 st.rerun()
