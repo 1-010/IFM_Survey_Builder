@@ -1401,6 +1401,11 @@ if tab_admin:
                         
                         st.info("顧客配信用リンク (本番環境):")
                         st.code(prod_url, language=None)
+                        
+                        # スマホですぐスキャンしてアクセスできるようにQRコードを表示
+                        qr_prod_url = f"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={prod_url}"
+                        st.image(qr_prod_url, caption="スマホ用顧客配信用QRコード (本番環境)", width=180)
+                        
                         st.info("テスト用リンク (ローカル環境):")
                         st.code(local_url, language=None)
             
