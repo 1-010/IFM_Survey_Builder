@@ -358,122 +358,216 @@ else:
 with tab_input:
     col_left_form, col_right_chart = st.columns([11, 9])
     
+    # セッション状態管理:
+    # current_step == 0: 個人情報入力 ＆ プライバシーポリシー同意画面 (Step 0)
+    # current_step >= 1: 設問 1 〜 10 の回答画面
     if "current_step" not in st.session_state:
         st.session_state.current_step = 0
         
     num_questions = len(q_df)
     
     with col_left_form:
-        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>1. 回答者プロファイル</h4>", unsafe_allow_html=True)
-        col_attr1, col_attr2 = st.columns(2)
-        with col_attr1:
-            respondent_name = st.text_input("回答者名 *", placeholder="氏名をご記入ください", value=st.session_state.get("res_name", ""))
+        if st.session_state.current_step == 0:
+            # --- STEP 0: プロファイル ＆ プライバシーポリシー同意画面 ---
+            st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF;'>回答者プロファイル ＆ 同意確認</h3>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#D5D5CB; font-size:0.95rem; margin-bottom:20px;'>アセスメントを開始する前に、以下のプロファイル情報の入力と、個人情報の取り扱いへのご同意をお願いいたします。</p>", unsafe_allow_html=True)
+            
+            # 入力フィールド群
+            respondent_name = st.text_input("回答者名 *", placeholder="氏名をご記入ください（例: 山田 太郎）", value=st.session_state.get("res_name", ""))
             st.session_state["res_name"] = respondent_name
-            email_input = st.text_input("メールアドレス *", placeholder="sasaki@autodesk.com", value=st.session_state.get("res_email", ""))
+            
+            email_input = st.text_input("メールアドレス *", placeholder="example@autodesk.com", value=st.session_state.get("res_email", ""))
             st.session_state["res_email"] = email_input
-        with col_attr2:
+            
             experience_years = st.radio(
                 "勤続年数 *",
                 ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"],
                 index=["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"].index(st.session_state.get("res_exp")) if st.session_state.get("res_exp") in ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"] else None,
                 horizontal=True,
-                key="res_exp_radio"
+                key="res_exp_radio_step0"
             )
             st.session_state["res_exp"] = experience_years
-            specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: 生産技術部", value=st.session_state.get("res_team", ""))
+            
+            specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: 生産技術部 設計課", value=st.session_state.get("res_team", ""))
             st.session_state["res_team"] = specific_team
-        
-        st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
-        
-        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>2. 自己成熟度評価</h4>", unsafe_allow_html=True)
-        
-        current_idx = st.session_state.current_step
-        row = q_df.iloc[current_idx]
-        qid = row['question_id']
-        
-        st.markdown(
-            f"<div style='font-size:0.85rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
-            f"{row['department']} 領域  ·  STEP {current_idx + 1} / {num_questions}</div>",
-            unsafe_allow_html=True
-        )
-        st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:700;'>{row['phase']}</h3>", unsafe_allow_html=True)
-        
-        st.markdown(
-            f"<div style='background-color:#121212; padding:20px; border-left:4px solid #FFFF00; margin-bottom:20px; font-size:1.05rem; line-height:1.6; color:#FFFFFF;'>"
-            f"{row['question_text']}</div>", 
-            unsafe_allow_html=True
-        )
-        
-        skip_key = f"skip_{qid}"
-        if skip_key not in st.session_state:
-            st.session_state[skip_key] = False
-        skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
-        
-        asis_key = f"asis_{qid}"
-        tobe_key = f"tobe_{qid}"
-        if asis_key not in st.session_state:
-            st.session_state[asis_key] = 2
-        if tobe_key not in st.session_state:
-            st.session_state[tobe_key] = 4
             
-        col_s1, col_s2 = st.columns(2)
-        with col_s1:
-            as_is_val = st.slider(
-                "現状の成熟度評価 (As-Is)", 
-                1, 5, 
-                key=asis_key, 
-                disabled=skip
-            )
-        with col_s2:
-            to_be_val = st.slider(
-                "将来の目標成熟度 (To-Be)", 
-                1, 5, 
-                key=tobe_key, 
-                disabled=skip
-            )
+            st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
             
-        if not skip:
-            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+            # プライバシーポリシーのコンプライアンス表示 (スクロールコンテナ風)
+            st.markdown("<h4 style='margin-bottom:8px; font-weight:600; color:#FFFFFF; font-size:1rem;'>個人情報の取り扱いに関する説明事項 *</h4>", unsafe_allow_html=True)
+            privacy_policy_text = """ご提供いただく個人情報（氏名、メールアドレス、部署名等）および自己アセスメントの回答結果は、Autodeskおよびその関係会社により、以下の目的で利用されます。
+1. 本アセスメントの回答結果の集計、スコアリング、および成熟度診断レポートの作成。
+2. 診断結果に基づく、お客様に最適化されたCAD設計・データ管理・建設/製造向けソリューションのご提案。
+3. Autodeskの営業担当者やパートナーからの製品、イベント、トレーニング情報のご提供や各種お問い合わせ対応。
+
+ご提供いただいた情報は、Autodeskのグローバルプライバシーポリシー（https://www.autodesk.com/privacy）に基づき、厳重に管理されます。"""
             
-            asis_text = row['levels'][f"L{as_is_val}"]
             st.markdown(
-                f"<div class='level-desc-box'>"
-                f"<b style='color:#FFFF00;'>現在の評価 (Level {as_is_val}) の定義:</b><br>{asis_text}"
-                f"</div>",
+                f'<div style="background-color:#121212; border:1px solid #666666; border-radius:8px; padding:15px; max-height:160px; overflow-y:auto; font-size:0.88rem; color:#D5D5CB; line-height:1.5; white-space:pre-wrap;">'
+                f'{privacy_policy_text}'
+                f'</div>',
                 unsafe_allow_html=True
             )
             
-            tobe_text = row['levels'][f"L{to_be_val}"]
+            st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
+            agree_privacy = st.checkbox("上記個人情報の取り扱い説明事項を確認し、同意します。", value=st.session_state.get("agree_privacy", False), key="agree_privacy_step0")
+            st.session_state["agree_privacy"] = agree_privacy
+            
+            # バリデーションチェック
+            inputs_valid = (
+                respondent_name.strip() != "" and 
+                email_input.strip() != "" and 
+                is_valid_email(email_input) and 
+                experience_years is not None and 
+                agree_privacy
+            )
+            
+            st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
+            
+            # アセスメント開始ボタン (必須事項が埋まっていない、または同意がない場合は押せない)
+            if st.button("自己アセスメントを開始する ➔", disabled=not inputs_valid, use_container_width=True):
+                st.session_state.current_step = 1
+                st.rerun()
+                
+        else:
+            # --- STEP 1 〜 10: 設問回答画面 (プロファイルは画面外に隠蔽) ---
+            current_idx = st.session_state.current_step - 1
+            row = q_df.iloc[current_idx]
+            qid = row['question_id']
+            
+            # ステップ送りナビゲーション
             st.markdown(
-                f"<div class='level-desc-box-target'>"
-                f"<b style='color:#D5D5CB;'>目標の評価 (Level {to_be_val}) の定義:</b><br>{tobe_text}"
-                f"</div>",
+                f"<div style='font-size:0.85rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
+                f"{row['department']} 領域  ·  STEP {st.session_state.current_step} / {num_questions}</div>",
+                unsafe_allow_html=True
+            )
+            st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:700;'>{row['phase']}</h3>", unsafe_allow_html=True)
+            
+            # 設問カード
+            st.markdown(
+                f"<div style='background-color:#121212; padding:20px; border-left:4px solid #FFFF00; margin-bottom:20px; font-size:1.05rem; line-height:1.6; color:#FFFFFF;'>"
+                f"{row['question_text']}</div>", 
                 unsafe_allow_html=True
             )
             
-        st.markdown("<br>", unsafe_allow_html=True)
-        
-        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
-        with col_btn1:
-            prev_disabled = st.session_state.current_step == 0
-            if st.button("⬅️ 前の設問", disabled=prev_disabled, use_container_width=True):
-                st.session_state.current_step -= 1
-                st.rerun()
+            # 該当しない場合のスキップ
+            skip_key = f"skip_{qid}"
+            if skip_key not in st.session_state:
+                st.session_state[skip_key] = False
+            skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
+            
+            # スライダー
+            asis_key = f"asis_{qid}"
+            tobe_key = f"tobe_{qid}"
+            if asis_key not in st.session_state:
+                st.session_state[asis_key] = 2
+            if tobe_key not in st.session_state:
+                st.session_state[tobe_key] = 4
                 
-        with col_btn2:
-            next_disabled = st.session_state.current_step == num_questions - 1
-            if st.button("次の設問 ➡️", disabled=next_disabled, use_container_width=True):
-                st.session_state.current_step += 1
-                st.rerun()
+            col_s1, col_s2 = st.columns(2)
+            with col_s1:
+                as_is_val = st.slider(
+                    "現状の成熟度評価 (As-Is)", 
+                    1, 5, 
+                    key=asis_key, 
+                    disabled=skip
+                )
+            with col_s2:
+                to_be_val = st.slider(
+                    "将来の目標成熟度 (To-Be)", 
+                    1, 5, 
+                    key=tobe_key, 
+                    disabled=skip
+                )
                 
-        with col_btn3:
-            is_last_step = st.session_state.current_step == num_questions - 1
-            submit_disabled = not is_last_step
-            submit_clicked = st.button("🏁 アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
+            # 動的レベル定義カード
+            if not skip:
+                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                
+                asis_text = row['levels'][f"L{as_is_val}"]
+                st.markdown(
+                    f"<div class='level-desc-box'>"
+                    f"<b style='color:#FFFF00;'>現在の評価 (Level {as_is_val}) の定義:</b><br>{asis_text}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                
+                tobe_text = row['levels'][f"L{to_be_val}"]
+                st.markdown(
+                    f"<div class='level-desc-box-target'>"
+                    f"<b style='color:#D5D5CB;'>目標の評価 (Level {to_be_val}) の定義:</b><br>{tobe_text}"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                
+            st.markdown("<br><hr style='border-color:#666666; margin:10px 0;'>", unsafe_allow_html=True)
+            
+            # 必要に応じて引っ張り出せるアコーディオン (プロファイル ＆ 同意書の再確認/編集)
+            with st.expander("👤 登録プロファイル・個人情報同意事項の確認と変更"):
+                st.markdown("<p style='font-size:0.85rem; color:#D5D5CB; margin-bottom:10px;'>登録情報を変更すると、すべての設問の送信データにリアルタイムに反映されます。</p>", unsafe_allow_html=True)
+                
+                edit_name = st.text_input("回答者名 *", value=st.session_state.get("res_name", ""), key="edit_name")
+                st.session_state["res_name"] = edit_name
+                
+                edit_email = st.text_input("メールアドレス *", value=st.session_state.get("res_email", ""), key="edit_email")
+                st.session_state["res_email"] = edit_email
+                
+                edit_exp = st.selectbox(
+                    "勤続年数 *",
+                    ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"],
+                    index=["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"].index(st.session_state.get("res_exp")) if st.session_state.get("res_exp") in ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"] else 0,
+                    key="edit_exp"
+                )
+                st.session_state["res_exp"] = edit_exp
+                
+                edit_team = st.text_input("部署名・チーム名 (任意)", value=st.session_state.get("res_team", ""), key="edit_team")
+                st.session_state["res_team"] = edit_team
+                
+                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                st.markdown("<b style='font-size:0.88rem; color:#FFFFFF;'>【同意ステータス】</b>", unsafe_allow_html=True)
+                edit_agree = st.checkbox("個人情報の取り扱い説明事項に同意します *", value=st.session_state.get("agree_privacy", False), key="edit_agree")
+                st.session_state["agree_privacy"] = edit_agree
+                
+            st.markdown("<br>", unsafe_allow_html=True)
+            
+            # ナビゲーションボタン群
+            col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
+            with col_btn1:
+                # 前のステップへ戻る (Step 1のときは Step 0 のプロファイル画面に戻る)
+                if st.button("⬅️ 前の画面", use_container_width=True):
+                    st.session_state.current_step -= 1
+                    st.rerun()
+                    
+            with col_btn2:
+                next_disabled = st.session_state.current_step == num_questions
+                if st.button("次の設問 ➡️", disabled=next_disabled, use_container_width=True):
+                    st.session_state.current_step += 1
+                    st.rerun()
+                    
+            with col_btn3:
+                # 最終送信条件: 同意チェックがONであり、かつ必須項目がすべて正しく入力されていること
+                is_last_step = st.session_state.current_step == num_questions
+                profile_valid = (
+                    st.session_state.get("res_name", "").strip() != "" and
+                    st.session_state.get("res_email", "").strip() != "" and
+                    is_valid_email(st.session_state.get("res_email", "")) and
+                    st.session_state.get("res_exp") is not None and
+                    st.session_state.get("agree_privacy", False) # 必須：同意が入っていること
+                )
+                submit_disabled = not (is_last_step and profile_valid)
+                submit_clicked = st.button("🏁 アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
+                
+                # 同意が外れている場合に警告メッセージを表示する親切設計
+                if is_last_step and not st.session_state.get("agree_privacy", False):
+                    st.warning("⚠️ 送信するには個人情報の取り扱いへの同意が必要です（『登録プロファイル・個人情報同意事項の確認と変更』から同意をONにできます）。")
 
     with col_right_chart:
-        render_hero_image(qid)
-        
+        # Step 0 のときは共通のアセット画像を表示、回答中は設問に連動した画像を表示
+        if st.session_state.current_step == 0:
+            render_hero_image("PE01") # デフォルトで美麗なデジタルファクトリー画像
+        else:
+            render_hero_image(qid)
+            
         st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>🛰️ ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
         
         plot_categories = []
@@ -492,8 +586,6 @@ with tab_input:
             
         if plot_categories:
             fig = go.Figure()
-            # Functional Colors: Twilight Blue (#1D91D0) for As-Is, Morning Green (#2AD0A9) for To-Be
-            # Ultra-clean holographic stylings (opacity and thin line)
             fig.add_trace(go.Scatterpolar(
                 r=plot_asis + [plot_asis[0]],
                 theta=plot_categories + [plot_categories[0]],
@@ -547,19 +639,27 @@ with tab_input:
             )
             st.plotly_chart(fig, use_container_width=True)
             
+            # 進捗インジケーター（Step 0 は未回答扱い、Step 1〜10 の回答数でパーセント表示）
             answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
-            
-            # Subtle Progress indicators
             st.progress(answered_count / num_questions)
             st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
-    if submit_clicked:
-        if not respondent_name.strip():
+    # 送信処理のバリデーションと実行
+    if st.session_state.current_step == num_questions and submit_clicked:
+        res_name = st.session_state.get("res_name", "").strip()
+        res_email = st.session_state.get("res_email", "").strip()
+        res_exp = st.session_state.get("res_exp")
+        res_team = st.session_state.get("res_team", "").strip()
+        agree_privacy = st.session_state.get("agree_privacy", False)
+        
+        if not res_name:
             st.error("❌ 回答者名を入力してください。")
-        elif not email_input.strip() or not is_valid_email(email_input):
+        elif not res_email or not is_valid_email(res_email):
             st.error("❌ 有効なメールアドレスを入力してください。")
-        elif not experience_years:
+        elif not res_exp:
             st.error("❌ 勤続年数を選択してください。")
+        elif not agree_privacy:
+            st.error("❌ 個人情報の取り扱いへの同意が必要です。")
         else:
             timestamp = datetime.now().isoformat()
             records = []
@@ -573,11 +673,11 @@ with tab_input:
                 
                 records.append({
                     "timestamp": timestamp,
-                    "respondent": respondent_name.strip(),
-                    "email": email_input.strip(),
-                    "experience_years": experience_years,
+                    "respondent": res_name,
+                    "email": res_email,
+                    "experience_years": res_exp,
                     "department": r['department'],
-                    "team": specific_team.strip(),
+                    "team": res_team,
                     "question_id": q_id,
                     "phase": r['phase'],
                     "as_is": as_is_val,
@@ -594,10 +694,10 @@ with tab_input:
                 
             firestore_doc = {
                 "timestamp": timestamp,
-                "respondent": respondent_name.strip(),
-                "email": email_input.strip(),
-                "experience_years": experience_years,
-                "team": specific_team.strip(),
+                "respondent": res_name,
+                "email": res_email,
+                "experience_years": res_exp,
+                "team": res_team,
                 "survey_id": active_survey_id,
                 "answers": answers_list
             }
