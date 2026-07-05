@@ -25,36 +25,66 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_JSON = SCRIPT_DIR / "data" / "ifm_questions.json"
 IMAGES_DIR = SCRIPT_DIR / "data" / "images"
 
-# Autodesk Brand Global CSS Styling Injection
+# Autodesk Brand Global CSS Styling Injection for Museum-like Minimalism
 st.markdown(
     """
     <style>
     /* Autodesk Brand Theme Overrides */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;600;700&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
     html, body, [data-testid="stAppViewContainer"] {
-        background-color: #0E0E0E !important; /* Deep Charcoal/Black */
-        color: #EAEAEA !important; /* Clay Light Gray */
+        background-color: #0B0B0B !important; /* Rich Dark Charcoal */
+        color: #E6E6E6 !important; /* Autodesk Clay Light Gray */
         font-family: 'Inter', sans-serif !important;
     }
     
     /* Input & Text Colors */
     h1, h2, h3, h4, h5, h6, label, span, p {
-        color: #EAEAEA !important;
+        color: #E6E6E6 !important;
     }
     
-    /* Subheaders & secondary labels */
-    div[data-testid="stMarkdownContainer"] p {
-        color: #EAEAEA;
+    /* Clean headings */
+    h1 {
+        font-size: 2.2rem !important;
+        font-weight: 700 !important;
+        letter-spacing: -0.03em !important;
+        margin-bottom: 0.2rem !important;
     }
     
-    /* Sharp edges and flat industrial border */
+    /* Layout card styling - Minimal borders, high whitespace */
     div[data-testid="stVerticalBlockBorderWrapper"] > div {
-        border-radius: 4px !important;
-        border: 1px solid #232323 !important;
-        background-color: #161616 !important;
-        padding: 18px !important;
+        border-radius: 0px !important; /* Flat industrial edges */
+        border: none !important;
+        border-left: 1px solid #1F1F1F !important;
+        background-color: transparent !important;
+        padding: 0px 24px !important;
         box-shadow: none !important;
+    }
+    
+    /* Left column card formatting */
+    .question-card {
+        background-color: #121212;
+        border: 1px solid #1F1F1F;
+        padding: 24px;
+        margin-bottom: 20px;
+    }
+    
+    /* Dynamic Level Definition Cards */
+    .level-desc-box {
+        background-color: #161616;
+        border-left: 3px solid #0696D7;
+        padding: 12px 16px;
+        margin-top: 10px;
+        font-size: 0.92rem;
+        color: #C0C0C0;
+    }
+    .level-desc-box-target {
+        background-color: #161616;
+        border-left: 3px solid #8C9BA5;
+        padding: 12px 16px;
+        margin-top: 10px;
+        font-size: 0.92rem;
+        color: #C0C0C0;
     }
     
     /* Hide Streamlit Default branding & menus globally */
@@ -65,7 +95,7 @@ st.markdown(
     [class*="viewerBadge"] {display: none !important;}
     div[data-testid="stStatusWidget"] {visibility: hidden; display: none !important;}
     
-    /* Custom Slider Accent */
+    /* Custom Slider Accent (Autodesk Cyan) */
     div[role="slider"] {
         background-color: #0696D7 !important;
     }
@@ -73,46 +103,44 @@ st.markdown(
         color: #0696D7 !important;
     }
     
-    /* Primary buttons brand theme */
+    /* Buttons styling - Flat & Minimalist */
     div.stButton > button:first-child {
         background-color: #0696D7 !important;
         color: #FFFFFF !important;
         border: none !important;
-        border-radius: 4px !important;
-        font-weight: 600 !important;
-        padding: 10px 24px !important;
-        transition: background-color 0.2s ease;
+        border-radius: 2px !important;
+        font-weight: 500 !important;
+        font-size: 0.9rem !important;
+        letter-spacing: 0.05em !important;
+        padding: 8px 20px !important;
+        transition: all 0.15s ease;
     }
     div.stButton > button:first-child:hover {
         background-color: #0080B8 !important;
     }
     
+    /* Secondary/Navigation buttons */
+    div.stButton > button[disabled] {
+        background-color: #1A1A1A !important;
+        color: #555555 !important;
+    }
+    
     /* Tab bar color override */
     button[data-baseweb="tab"] {
         color: #8C9BA5 !important;
+        font-size: 0.95rem !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] {
         color: #0696D7 !important;
         border-bottom-color: #0696D7 !important;
     }
     
-    /* Clean up st.table styling to match Clay/Charcoal */
-    .stTable table {
-        background-color: #1A1A1A !important;
-        border: 1px solid #2A2A2A !important;
-        color: #EAEAEA !important;
-    }
-    .stTable th {
-        background-color: #232323 !important;
-        color: #EAEAEA !important;
-        border-bottom: 1px solid #2A2A2A !important;
-    }
-    .stTable td {
-        border-bottom: 1px solid #232323 !important;
-        color: #D4D4D4 !important;
+    /* Navigation Progress Bar styling */
+    .stProgress > div > div > div {
+        background-color: #0696D7 !important;
     }
     
-    /* Make the right radar chart sticky on large screens */
+    /* Make the right visual & chart sticky on large screens */
     @media (min-width: 992px) {
         div[data-testid="stColumn"]:nth-child(2) {
             position: -webkit-sticky;
@@ -251,174 +279,219 @@ IMAGE_MAPPING = {
     "PE04": "brand-image-prototype-4-dark.webp"
 }
 
-def render_question_image(qid):
+def render_hero_image(qid):
     img_filename = IMAGE_MAPPING.get(qid)
     if img_filename:
         img_path = IMAGES_DIR / img_filename
         if img_path.exists():
             st.image(str(img_path), use_container_width=True)
             return
-    # Default fall-back visual (grid outline container via html)
+    # Default fallback container
     st.markdown(
         """
         <div style="
             border: 1px dashed #2A2A2A; 
             background: linear-gradient(135deg, #161616 25%, #222222 25%, #222222 50%, #161616 50%, #161616 75%, #222222 75%, #222222 100%);
             background-size: 20px 20px;
-            height: 160px; 
+            height: 220px; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            border-radius: 4px;
+            border-radius: 2px;
             color: #5F6B73;
             font-size: 0.9rem;
             font-family: monospace;
-            margin-bottom: 12px;
+            margin-bottom: 20px;
         ">
-        [ AUTODESK // PRECISION_DRAFT_BG ]
+        [ AUTODESK // PRECISION_DRAFT_HERO ]
         </div>
         """,
         unsafe_allow_html=True
     )
 
 # Brand Header Layout
-col_header_logo, col_header_text = st.columns([1, 6])
+col_header_logo, col_header_text = st.columns([1, 8])
 with col_header_logo:
     logo_svg_path = IMAGES_DIR / "autodesk_logo_white.svg"
     if logo_svg_path.exists():
         with open(logo_svg_path, "r", encoding="utf-8") as f:
             svg_content = f.read()
-        st.markdown(f'<div style="margin-top: 12px; width: 150px;">{svg_content}</div>', unsafe_allow_html=True)
+        st.markdown(f'<div style="margin-top: 14px; width: 140px;">{svg_content}</div>', unsafe_allow_html=True)
     else:
         st.markdown("<h2 style='color:#0696D7; margin:0;'>AUTODESK</h2>", unsafe_allow_html=True)
 
 with col_header_text:
-    st.markdown("<h1 style='margin:0; font-weight:700;'>IFM Maturity Assessment System</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='margin:0; color:#8C9BA5;'>Integrated Factory Management - Self Diagnostic Platform</p>", unsafe_allow_html=True)
+    st.markdown("<h1 style='margin:0;'>IFM Maturity Assessment</h1>", unsafe_allow_html=True)
 
-st.markdown("---")
+st.markdown("<hr style='border-color:#1F1F1F; margin-top:10px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
 # Hide Navigation Tabs for Clients
 is_client_access = "survey_id" in st.query_params
 
 if is_client_access:
-    tabs = st.tabs(["📝 アセスメント回答入力"])
+    tabs = st.tabs(["📝 アセスメント回答"])
     tab_input = tabs[0]
     tab_dashboard = None
     tab_admin = None
 else:
-    tabs = st.tabs(["📝 アセスメント回答入力", "📊 結果分析ダッシュボード", "🔧 営業管理（カスタム発行）"])
+    tabs = st.tabs(["📝 アセスメント回答", "📊 結果分析", "🔧 営業管理"])
     tab_input = tabs[0]
     tab_dashboard = tabs[1]
     tab_admin = tabs[2]
 
 ### 📝 Tab 1: 回答入力フォーム ###
 with tab_input:
-    if client_name:
-        st.markdown(f"### 🤝 **{client_name} 様向け自己アセスメント**")
+    # 2カラムレイアウト構築 (左: 設問コントロール / 右: ヒーロービジュアル ＆ ライブレーダーチャート)
+    col_left_form, col_right_chart = st.columns([11, 9])
     
-    # 2カラムレイアウト構築 (左: 回答 / 右: リアルタイムレーダーチャート)
-    col_left_form, col_right_chart = st.columns([3, 2])
+    # セッションによるステップ状態（1問1答）の管理
+    if "current_step" not in st.session_state:
+        st.session_state.current_step = 0
+        
+    num_questions = len(q_df)
     
-    # ユーザー属性入力
+    # ユーザー属性入力（最初のステップの前に表示するか、ステップ0に組み込む）
     with col_left_form:
-        with st.container():
-            st.markdown("#### 1. 回答者情報の入力")
-            col_attr1, col_attr2 = st.columns(2)
-            with col_attr1:
-                respondent_name = st.text_input("回答者名 *", placeholder="例: 佐々木 秀成")
-                email_input = st.text_input("メールアドレス *", placeholder="例: sasaki@example.com")
-            with col_attr2:
-                experience_years = st.radio(
-                    "勤続年数 *",
-                    ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"],
-                    index=None,
-                    horizontal=True
-                )
-                specific_team = st.text_input("部署名・チーム名（任意）", placeholder="例: 第一生産技術部")
+        # 回答者属性情報の入力コンテナ（未完了時は常に上部にコンパクトに表示）
+        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#8C9BA5;'>1. 回答者プロファイル</h4>", unsafe_allow_html=True)
+        col_attr1, col_attr2 = st.columns(2)
+        with col_attr1:
+            respondent_name = st.text_input("回答者名 *", placeholder="氏名をご記入ください", value=st.session_state.get("res_name", ""))
+            st.session_state["res_name"] = respondent_name
+            email_input = st.text_input("メールアドレス *", placeholder="sasaki@autodesk.com", value=st.session_state.get("res_email", ""))
+            st.session_state["res_email"] = email_input
+        with col_attr2:
+            experience_years = st.radio(
+                "勤続年数 *",
+                ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"],
+                index=["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"].index(st.session_state.get("res_exp")) if st.session_state.get("res_exp") in ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"] else None,
+                horizontal=True,
+                key="res_exp_radio"
+            )
+            st.session_state["res_exp"] = experience_years
+            specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: 生産技術部", value=st.session_state.get("res_team", ""))
+            st.session_state["res_team"] = specific_team
         
-        st.markdown("<br>", unsafe_allow_html=True)
-        st.markdown("#### 2. 成熟度自己アセスメント")
-        st.markdown("現在のレベル（As-Is）と将来目指す目標（To-Be）を回答してください。")
+        st.markdown("<hr style='border-color:#1F1F1F; margin:20px 0;'>", unsafe_allow_html=True)
         
-        questions_by_dept = q_df.groupby("department")
+        # 設問エリア
+        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#8C9BA5;'>2. 自己成熟度評価</h4>", unsafe_allow_html=True)
         
-        # ユーザー回答の一時保存辞書
-        current_answers = {}
+        # 現在の質問オブジェクトを取得
+        current_idx = st.session_state.current_step
+        row = q_df.iloc[current_idx]
+        qid = row['question_id']
         
-        for dept_name, group in questions_by_dept:
-            st.markdown(f"### [ {dept_name} 領域 ]")
+        # ステップナビゲーション表示
+        st.markdown(
+            f"<div style='font-size:0.85rem; color:#0696D7; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;'>"
+            f"{row['department']} 領域  ·  STEP {current_idx + 1} / {num_questions}</div>",
+            unsafe_allow_html=True
+        )
+        st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:600;'>{row['phase']}</h3>", unsafe_allow_html=True)
+        
+        # 質問文のカード表示
+        st.markdown(
+            f"<div style='background-color:#141414; padding:20px; border-left:3px solid #0696D7; margin-bottom:20px; font-size:1.05rem; line-height:1.6; color:#D4D4D4;'>"
+            f"{row['question_text']}</div>", 
+            unsafe_allow_html=True
+        )
+        
+        # スキップトグル
+        skip_key = f"skip_{qid}"
+        if skip_key not in st.session_state:
+            st.session_state[skip_key] = False
+        skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
+        
+        # スライダー配置
+        asis_key = f"asis_{qid}"
+        tobe_key = f"tobe_{qid}"
+        if asis_key not in st.session_state:
+            st.session_state[asis_key] = 2
+        if tobe_key not in st.session_state:
+            st.session_state[tobe_key] = 4
             
-            for _, row in group.iterrows():
-                qid = row['question_id']
-                with st.container():
-                    # 左右配置（左: 設問 & スライダー、右: 製品画像）
-                    col_q_text, col_q_img = st.columns([3, 2])
-                    
-                    with col_q_text:
-                        st.markdown(f"##### **{row['phase']}** ({qid})")
-                        st.markdown(
-                            f"<div style='border-left: 2px solid #0696D7; padding-left: 10px; color:#D4D4D4; font-size:0.95rem; margin-bottom:10px;'>{row['question_text']}</div>", 
-                            unsafe_allow_html=True
-                        )
-                        
-                        skip = st.toggle("自身の職務には該当しない (スキップ)", key=f"skip_{qid}")
-                    
-                    with col_q_img:
-                        render_question_image(qid)
-                    
-                    # レベル定義表の表示 (st.table を使用してクリックやソートを完全無効化)
-                    levels_df = pd.DataFrame([
-                        {"レベル": "L1", "定義": row['levels']['L1']},
-                        {"レベル": "L2", "定義": row['levels']['L2']},
-                        {"レベル": "L3", "定義": row['levels']['L3']},
-                        {"レベル": "L4", "定義": row['levels']['L4']},
-                        {"レベル": "L5", "定義": row['levels']['L5']}
-                    ])
-                    st.table(levels_df.set_index("レベル"))
-                    
-                    # スライダー
-                    col_slide1, col_slide2 = st.columns(2)
-                    with col_slide1:
-                        as_is_val = st.slider(
-                            f"現状の評価 (As-Is) - {row['phase']}", 
-                            1, 5, 2, 
-                            key=f"asis_{qid}", 
-                            disabled=skip
-                        )
-                    with col_slide2:
-                        to_be_val = st.slider(
-                            f"将来の目標 (To-Be) - {row['phase']}", 
-                            1, 5, 4, 
-                            key=f"tobe_{qid}", 
-                            disabled=skip
-                        )
-                    
-                    current_answers[qid] = {
-                        "phase": row['phase'],
-                        "as_is": None if skip else as_is_val,
-                        "to_be": None if skip else to_be_val
-                    }
-                st.markdown("<hr style='border-color: #232323;'>", unsafe_allow_html=True)
-                
-        # 送信ボタン
-        submit_clicked = st.button("アセスメント結果を送信する", type="primary", use_container_width=True)
-
-    # 右カラム: リアルタイムレーダーチャート表示 (Sticky)
-    with col_right_chart:
-        st.markdown("#### 🛰️ ライブ成熟度プロファイル")
-        st.markdown("スライダーの変更がリアルタイムに反映されます。")
+        col_s1, col_s2 = st.columns(2)
+        with col_s1:
+            as_is_val = st.slider(
+                "現状の成熟度評価 (As-Is)", 
+                1, 5, 
+                key=asis_key, 
+                disabled=skip
+            )
+        with col_s2:
+            to_be_val = st.slider(
+                "将来の目標成熟度 (To-Be)", 
+                1, 5, 
+                key=tobe_key, 
+                disabled=skip
+            )
+            
+        # 動的なレベル定義のテキストカード表示 (st.table を排し、選択された数値の定義のみをクリーンに表示！)
+        if not skip:
+            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+            
+            # As-Is の定義テキスト
+            asis_text = row['levels'][f"L{as_is_val}"]
+            st.markdown(
+                f"<div class='level-desc-box'>"
+                f"<b>現在の評価 (Level {as_is_val}) の定義:</b><br>{asis_text}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+            
+            # To-Be の定義テキスト
+            tobe_text = row['levels'][f"L{to_be_val}"]
+            st.markdown(
+                f"<div class='level-desc-box-target'>"
+                f"<b>目標の評価 (Level {to_be_val}) の定義:</b><br>{tobe_text}"
+                f"</div>",
+                unsafe_allow_html=True
+            )
+            
+        st.markdown("<br>", unsafe_allow_html=True)
         
-        # 動的にプロットデータを集約
+        # ステップ送りボタンのレイアウト
+        col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
+        with col_btn1:
+            prev_disabled = st.session_state.current_step == 0
+            if st.button("⬅️ 前の設問", disabled=prev_disabled, use_container_width=True):
+                st.session_state.current_step -= 1
+                st.rerun()
+                
+        with col_btn2:
+            next_disabled = st.session_state.current_step == num_questions - 1
+            if st.button("次の設問 ➡️", disabled=next_disabled, use_container_width=True):
+                st.session_state.current_step += 1
+                st.rerun()
+                
+        with col_btn3:
+            # 全問回答完了時の送信アクション
+            is_last_step = st.session_state.current_step == num_questions - 1
+            submit_disabled = not is_last_step
+            submit_clicked = st.button("🏁 アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
+
+    # 右カラム: ヒーローイメージ（現在ステップ同期） ＆ リアルタイムレーダーチャート
+    with col_right_chart:
+        # 現在アクティブな設問のヒーロービジュアルを上部にクリーンに固定表示
+        render_hero_image(qid)
+        
+        st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#8C9BA5;'>🛰️ ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
+        
+        # リアルタイムで現在までの回答状態をマージしてプロット
         plot_categories = []
         plot_asis = []
         plot_tobe = []
         
-        for qid in sorted(current_answers.keys()):
-            ans = current_answers[qid]
-            plot_categories.append(f"{ans['phase']}\n({qid})")
-            plot_asis.append(ans["as_is"] if ans["as_is"] is not None else 0)
-            plot_tobe.append(ans["to_be"] if ans["to_be"] is not None else 0)
+        for idx, r in q_df.iterrows():
+            q_id = r['question_id']
+            is_skipped = st.session_state.get(f"skip_{q_id}", False)
+            as_is = st.session_state.get(f"asis_{q_id}", 0) if not is_skipped else 0
+            to_be = st.session_state.get(f"tobe_{q_id}", 0) if not is_skipped else 0
+            
+            plot_categories.append(f"{r['phase']}\n({q_id})")
+            plot_asis.append(as_is)
+            plot_tobe.append(to_be)
             
         if plot_categories:
             fig = go.Figure()
@@ -429,8 +502,9 @@ with tab_input:
                 fill='toself',
                 name='現在の評価 (As-Is)',
                 line_color='#0696D7',
-                fillcolor='rgba(6, 150, 215, 0.2)',
-                opacity=0.6
+                fillcolor='rgba(6, 150, 215, 0.15)',
+                line=dict(width=2),
+                opacity=0.7
             ))
             fig.add_trace(go.Scatterpolar(
                 r=plot_tobe + [plot_tobe[0]],
@@ -438,8 +512,9 @@ with tab_input:
                 fill='toself',
                 name='将来の目標 (To-Be)',
                 line_color='#8C9BA5',
-                fillcolor='rgba(140, 155, 165, 0.1)',
-                opacity=0.4
+                fillcolor='rgba(140, 155, 165, 0.08)',
+                line=dict(width=1.5, dash='dash'),
+                opacity=0.5
             ))
             
             fig.update_layout(
@@ -448,43 +523,40 @@ with tab_input:
                         visible=True,
                         range=[0, 5],
                         tickvals=[1, 2, 3, 4, 5],
-                        gridcolor='#232323',
-                        linecolor='#232323',
-                        tickfont=dict(color='#8C9BA5')
+                        gridcolor='#1C1C1C',
+                        linecolor='#1C1C1C',
+                        tickfont=dict(color='#8C9BA5', size=9)
                     ),
                     angularaxis=dict(
-                        gridcolor='#232323',
-                        linecolor='#232323',
-                        tickfont=dict(color='#EAEAEA', size=10)
+                        gridcolor='#1C1C1C',
+                        linecolor='#1C1C1C',
+                        tickfont=dict(color='#E6E6E6', size=9)
                     ),
-                    bgcolor='#111111'
+                    bgcolor='#0E0E0E'
                 ),
                 showlegend=True,
                 legend=dict(
                     orientation="h",
                     yanchor="bottom",
-                    y=-0.2,
+                    y=-0.22,
                     xanchor="center",
                     x=0.5,
-                    font=dict(color='#EAEAEA')
+                    font=dict(color='#E6E6E6', size=10)
                 ),
-                paper_bgcolor='#0E0E0E',
-                margin=dict(l=40, r=40, t=20, b=40)
+                paper_bgcolor='#0B0B0B',
+                margin=dict(l=50, r=50, t=10, b=40)
             )
             st.plotly_chart(fig, use_container_width=True)
             
-            # リアルタイム簡易フィードバック
-            with st.container():
-                st.markdown("##### ⚡ リアルタイム進捗")
-                answered_count = sum(1 for val in plot_asis if val > 0)
-                total_count = len(plot_asis)
-                st.progress(answered_count / total_count if total_count > 0 else 0.0)
-                st.markdown(f"<small style='color:#8C9BA5;'>回答状況: {answered_count} / {total_count} 問完了</small>", unsafe_allow_html=True)
+            # リアルタイム簡易進捗インジケーター（1問1答形式での進捗）
+            answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
+            st.progress(answered_count / num_questions)
+            st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#8C9BA5; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
     # 送信処理のバリデーションと実行
     if submit_clicked:
         if not respondent_name.strip():
-            st.error("❌ 回答者名を入力してください。")
+            st.error("❌ 回回答者名を入力してください。")
         elif not email_input.strip() or not is_valid_email(email_input):
             st.error("❌ 有効なメールアドレスを入力してください。")
         elif not experience_years:
@@ -494,29 +566,29 @@ with tab_input:
             records = []
             answers_list = []
             
-            for _, row in q_df.iterrows():
-                qid = row['question_id']
-                ans_data = current_answers[qid]
-                as_is_val = "N/A" if ans_data["as_is"] is None else ans_data["as_is"]
-                to_be_val = "N/A" if ans_data["to_be"] is None else ans_data["to_be"]
+            for _, r in q_df.iterrows():
+                q_id = r['question_id']
+                is_skipped = st.session_state.get(f"skip_{q_id}", False)
+                as_is_val = "N/A" if is_skipped else st.session_state.get(f"asis_{q_id}", 2)
+                to_be_val = "N/A" if is_skipped else st.session_state.get(f"tobe_{q_id}", 4)
                 
                 records.append({
                     "timestamp": timestamp,
                     "respondent": respondent_name.strip(),
                     "email": email_input.strip(),
                     "experience_years": experience_years,
-                    "department": row['department'],
+                    "department": r['department'],
                     "team": specific_team.strip(),
-                    "question_id": qid,
-                    "phase": row['phase'],
+                    "question_id": q_id,
+                    "phase": r['phase'],
                     "as_is": as_is_val,
                     "to_be": to_be_val
                 })
                 
                 answers_list.append({
-                    "question_id": qid,
-                    "phase": row['phase'],
-                    "department": row['department'],
+                    "question_id": q_id,
+                    "phase": r['phase'],
+                    "department": r['department'],
                     "as_is": as_is_val,
                     "to_be": to_be_val
                 })
@@ -531,7 +603,7 @@ with tab_input:
                 "answers": answers_list
             }
                 
-            with st.spinner("アセスメント結果を送信中..."):
+            with st.spinner("結果を送信中..."):
                 fs_success = save_response_to_firestore(firestore_doc)
                 sheets_success = False
                 if fs_success:
@@ -539,9 +611,9 @@ with tab_input:
                 
                 if fs_success:
                     st.balloons()
-                    st.success("🎉 アセスメント回答が安全に送信されました！ありがとうございます。")
+                    st.success("🎉 自己アセスメント回答が安全に送信されました！")
                 else:
-                    st.error("❌ データベースへの保存に失敗しました。管理者にお問い合わせください。")
+                    st.error("❌ 送信に失敗しました。管理者にお問い合わせください。")
 
 
 ### 📊 Tab 2: 結果分析ダッシュボード ###
