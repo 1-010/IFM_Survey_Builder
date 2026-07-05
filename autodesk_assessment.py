@@ -324,34 +324,39 @@ def render_hero_image(qid):
         unsafe_allow_html=True
     )
 
-# Brand Header Layout (一体化したHTMLによる完全な重なり防止 ＆ 1px区切り線)
-logo_svg_path = IMAGES_DIR / "autodesk_logo_white.svg"
-header_html = ""
-if logo_svg_path.exists():
-    with open(logo_svg_path, "r", encoding="utf-8") as f:
-        svg_content = f.read()
-    # SVGロゴ + 縦の区切り線 + タイトルをフレックスボックスで一列配置
-    header_html = f"""
-    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 20px; margin-top: 10px; margin-bottom: 15px;">
-        <div style="width: 140px; display: flex; align-items: center;">{svg_content}</div>
-        <div style="height: 28px; width: 1px; background-color: #666666;"></div>
-        <div style="font-size: 1.5rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em; padding-top: 2px;">
+# Brand Header Layout (Dynamic 2-Stacked Logo on Left, Title on Right for Visual Hierarchy)
+# Generated using official symbol vector path data and Artifakt-like text weight
+stacked_logo_svg = """
+<svg width="220" height="85" viewBox="0 0 220 85" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Abstract A Symbol scaled up and centered -->
+  <g transform="scale(2.4) translate(30, 1)">
+    <path d="M0.538536 22.7316L19.9163 10.678H29.9686C30.2781 10.678 30.5561 10.9259 30.5561 11.2662C30.5561 11.5442 30.4321 11.6681 30.2781 11.7605L20.7598 17.4657C20.1416 17.8368 19.9252 18.579 19.9252 19.1356L19.9155 22.7316H32.0097V1.83296C32.0097 1.4303 31.7002 1.09078 31.2367 1.09078H19.6999L0.369995 13.091V22.7316L0.538536 22.7316Z" fill="white"/>
+  </g>
+  <!-- AUTODESK wordmark placed underneath -->
+  <text x="110" y="74" fill="white" font-family="'Inter', sans-serif" font-size="18" font-weight="900" letter-spacing="4.5" text-anchor="middle">AUTODESK</text>
+</svg>
+"""
+
+header_html = f"""
+<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;">
+    <!-- Left: 2-Stacked Logo (Dominant Visual) -->
+    <div style="width: 220px; display: flex; align-items: center;">
+        {stacked_logo_svg}
+    </div>
+    <!-- Right: Title and Context (Subordinate Visual) -->
+    <div style="text-align: right; min-width: 250px;">
+        <div style="font-size: 0.75rem; color: #666666; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">
+            Maturity Evaluation Platform
+        </div>
+        <div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">
             IFM Maturity Assessment
         </div>
     </div>
-    """
-else:
-    header_html = """
-    <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 20px; margin-top: 10px; margin-bottom: 15px;">
-        <div style="font-size: 1.5rem; font-weight: 900; color: #FFFF00; letter-spacing: 0.05em;">AUTODESK</div>
-        <div style="height: 28px; width: 1px; background-color: #666666;"></div>
-        <div style="font-size: 1.5rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.02em;">
-            IFM Maturity Assessment
-        </div>
-    </div>
-    """
+</div>
+"""
+
 st.markdown(header_html, unsafe_allow_html=True)
-st.markdown("<hr style='border-color:#666666; margin-top:0px; margin-bottom:20px;'>", unsafe_allow_html=True)
+st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
 # Hide Navigation Tabs for Clients
 is_client_access = False
