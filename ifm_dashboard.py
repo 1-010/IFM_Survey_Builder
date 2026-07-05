@@ -15,7 +15,9 @@ except AttributeError:
 
 # URLクエリに brand=autodesk がある場合は、別インスタンスである Autodesk版へルーティング
 if brand_param == "autodesk":
-    import autodesk_assessment
+    from pathlib import Path
+    target_path = Path(__file__).resolve().parent / "autodesk_assessment.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
     st.stop()
 
 import pandas as pd
