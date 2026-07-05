@@ -5,18 +5,31 @@ st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
 
 # 安全にクエリパラメータを取得（新旧バージョン互換性ハック）
 brand_param = None
+app_param = None
 try:
     brand_param = st.query_params.get("brand")
+    app_param = st.query_params.get("app")
 except AttributeError:
     try:
         brand_param = st.experimental_get_query_params().get("brand", [None])[0]
+        app_param = st.experimental_get_query_params().get("app", [None])[0]
     except:
         pass
 
-# URLクエリに brand=autodesk がある場合は、別インスタンスである Autodesk版へルーティング
+# URLクエリに brand=autodesk がある場合は、該当する Autodesk版アセスメントへルーティング
 if brand_param == "autodesk":
     from pathlib import Path
-    target_path = Path(__file__).resolve().parent / "autodesk_assessment.py"
+    script_name = "autodesk_assessment.py" # デフォルト: 設備管理成熟度
+    if app_param == "factory":
+        script_name = "autodesk_factory_survey.py"
+    elif app_param == "aec":
+        script_name = "autodesk_aec_survey.py"
+    elif app_param == "civil":
+        script_name = "autodesk_civil_survey.py"
+    elif app_param == "mfg":
+        script_name = "autodesk_mfg_survey.py"
+        
+    target_path = Path(__file__).resolve().parent / script_name
     exec(open(target_path, encoding="utf-8").read(), globals())
     st.stop()
 
