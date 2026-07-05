@@ -167,19 +167,59 @@ st.markdown(
             z-index: 999;
         }
     }
+    
+    /* Custom Proposal Cards Styles */
+    .proposal-card {
+        background-color: #121212;
+        border: 1px solid #333333;
+        border-left: 4px solid #FFFF00 !important;
+        border-radius: 4px;
+        padding: 18px;
+        margin-top: 15px;
+        margin-bottom: 15px;
+    }
+    .proposal-title {
+        font-size: 1.1rem;
+        font-weight: 700;
+        color: #FFFF00;
+        margin-bottom: 6px;
+    }
+    .proposal-desc {
+        font-size: 0.88rem;
+        color: #FFFFFF;
+        line-height: 1.5;
+        margin-bottom: 12px;
+    }
+    .proposal-link-btn {
+        display: inline-block;
+        background-color: #000000;
+        color: #FFFF00 !important;
+        border: 1px solid #FFFF00;
+        border-radius: 4px;
+        padding: 6px 14px;
+        font-size: 0.82rem;
+        font-weight: 600;
+        text-decoration: none !important;
+        letter-spacing: 0.05em;
+        transition: all 0.15s ease;
+    }
+    .proposal-link-btn:hover {
+        background-color: #FFFF00;
+        color: #000000 !important;
+    }
     </style>
     """,
     unsafe_allow_html=True
 )
 
 # Load Questions
-def load_default_questions():
+def load_all_questions_json():
     if not DATA_JSON.exists():
         st.error(f"質問定義ファイルが見つかりません: {DATA_JSON}")
-        return []
+        return {}
     with open(DATA_JSON, "r", encoding="utf-8") as f:
         data = json.load(f)
-    return data["questions"]
+    return data
 
 def get_active_questions():
     # 安全にクエリパラメータを取得（新旧バージョン互換性ハック）
@@ -198,7 +238,22 @@ def get_active_questions():
             return pd.DataFrame(custom_survey["questions"]), survey_id, custom_survey.get("client_name")
         else:
             st.warning(f"指定されたアンケートID `{survey_id}` が登録されていません。デフォルトの設問を表示します。")
-    return pd.DataFrame(load_default_questions()), "default", None
+            
+    # クエリパラメータに 'model' があり、'factory_cloud' が指定されている場合は新モデルをデフォルトに
+    model_param = None
+    try:
+        model_param = st.query_params.get("model")
+    except AttributeError:
+        try:
+            model_param = st.experimental_get_query_params().get("model", [None])[0]
+        except:
+            pass
+            
+    all_qs = load_all_questions_json()
+    if model_param == "factory_cloud" and "factory_cloud_questions" in all_qs:
+        return pd.DataFrame(all_qs["factory_cloud_questions"]), "default", None
+        
+    return pd.DataFrame(all_qs.get("questions", [])), "default", None
 
 q_df, active_survey_id, client_name = get_active_questions()
 
@@ -294,7 +349,7 @@ def is_valid_email(email):
 if q_df.empty:
     st.stop()
 
-# Question ID to Autodesk Brand Image Mapping Table
+# Question ID to Autodesk Brand Image Mapping Table (Expanded to support FC01-FC08)
 IMAGE_MAPPING = {
     "FI01": "fy27-aec-forma-industry-cloud-imagery.webp",
     "FI02": "brand-image-prototype-1-dark.webp",
@@ -303,7 +358,15 @@ IMAGE_MAPPING = {
     "PE01": "fy27-dm-digital-factory-campaign-visual-01.webp",
     "PE02": "fy27-dm-fusion-industry-cloud-imagery.webp",
     "PE03": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp",
-    "PE04": "brand-image-prototype-4-dark.webp"
+    "PE04": "brand-image-prototype-4-dark.webp",
+    "FC01": "fy27-aec-forma-industry-cloud-imagery.webp",
+    "FC02": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp",
+    "FC03": "brand-image-prototype-1-dark.webp",
+    "FC04": "brand-image-prototype-4-dark.webp",
+    "FC05": "Construction-CCEED-China-0644_with_overlay.webp",
+    "FC06": "fy27-water-image-02.webp",
+    "FC07": "fy27-dm-fusion-industry-cloud-imagery.webp",
+    "FC08": "fy27-dm-digital-factory-campaign-visual-01.webp"
 }
 
 def render_hero_image(qid):
@@ -365,7 +428,7 @@ else:
     tab_dashboard = tabs[1]
     tab_admin = tabs[2]
 
-### 📝 Tab 1: 回答入力フォーム ###
+### 📝 Tab 1: 回ザー回答入力フォーム ###
 with tab_input:
     col_left_form, col_right_chart = st.columns([11, 9])
     
@@ -377,8 +440,132 @@ with tab_input:
         
     num_questions = len(q_df)
     
+    # 送信完了フラグ
+    if "is_submitted" not in st.session_state:
+        st.session_state.is_submitted = False
+        
     with col_left_form:
-        if st.session_state.current_step == 0:
+        if st.session_state.is_submitted:
+            # --- 送信完了＆おすすめ製品動的提案画面 ---
+            st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF;'>アセスメント回答送信完了</h3>", unsafe_allow_html=True)
+            st.success("アセスメントの回答が安全に記録されました。ご協力ありがとうございました。")
+            st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
+            st.markdown("<h4 style='color:#FFFF00; font-weight:700; margin-bottom:10px;'>お客様の回答に基づく最適なソリューション提案</h4>", unsafe_allow_html=True)
+            st.markdown("<p style='color:#D5D5CB; font-size:0.92rem; margin-bottom:20px;'>回答から抽出された「現在の課題（As-Is）」と「目指したいゴール（To-Be）」の乖離値（Gap）を自動分析し、最適な解決策をご提案いたします。</p>", unsafe_allow_html=True)
+            
+            # 各設問のGap分析
+            gaps = []
+            for _, r in q_df.iterrows():
+                qid = r['question_id']
+                is_skipped = st.session_state.get(f"skip_{qid}", False)
+                if not is_skipped:
+                    as_is = st.session_state.get(f"asis_{qid}", 2)
+                    to_be = st.session_state.get(f"tobe_{qid}", 4)
+                    gaps.append({
+                        "question_id": qid,
+                        "phase": r['phase'],
+                        "gap": to_be - as_is,
+                        "to_be": to_be
+                    })
+            
+            # Gapが大きい順（且つTo-Beが高い順）にソート
+            gaps_sorted = sorted(gaps, key=lambda x: (x["gap"], x["to_be"]), reverse=True)
+            
+            # 製品提案マッピングテーブル
+            # 新モデル（FC01-FC08）および既存IFMモデル双方に対応
+            PRODUCT_PROPOSALS = {
+                "FC01": {
+                    "title": "AEC環境シミュレーションクラウド - Autodesk Forma",
+                    "desc": "初期計画段階での敷地分析、日影・騒音・風向シミュレーションの生産性向上に大きな乖離が見られます。Autodesk Formaを導入することで、敷地規制や環境影響をクラウド上のAIで即時解析し、手戻りの少ない初期配置計画を迅速に策定できます。",
+                    "url": "https://www.autodesk.com/products/forma/overview"
+                },
+                "FC02": {
+                    "title": "離散イベント生産シミュレーション - FlexSim",
+                    "desc": "製造工程や搬送・AGVルートのボトルネック検証に大きな改善余地があります。FlexSimを用いることで、工場レイアウト設計に『時間の概念』をプラスした高度なシミュレーションを実行し、無駄な設備投資の発生を防ぎます。",
+                    "url": "https://www.autodesk.com/products/flexsim/overview"
+                },
+                "FC03": {
+                    "title": "2D/3D双方向レイアウト設計同期 - Factory Design Utilities",
+                    "desc": "AutoCADによる平面計画と、Inventorによる3D設備アセンブリの連携に課題感が見られます。Factory Design Utilitiesを使用することで、2Dと3Dがリアルタイムに相互同期し、干渉チェックと整合性維持を全自動で行えます。",
+                    "url": "https://www.autodesk.com/solutions/factory-design"
+                },
+                "FC04": {
+                    "title": "AI搭載次世代設計モデリング - Navpack / Navasto",
+                    "desc": "AIを用いた自律型モデリングおよび設計支援に強い関心があるようです。過去の3D設計データを学習したAIエンジンと連携することで、形状要件を満たすバリエーションを自動生成し、設計効率を劇的に高めます。",
+                    "url": "https://www.autodesk.com/solutions/generative-design"
+                },
+                "FC05": {
+                    "title": "作図およびデータ連携の自動化 - AutoCAD API & 業種別ツールセット",
+                    "desc": "CAD内での定型処理の自動化やBOM連携にGapがあります。AutoCADの専用ツールセットやLISP/APIの本格導入により、図面から部品表の作成、データ統合などの手作業を完全に自動化できます。",
+                    "url": "https://www.autodesk.com/products/autocad/overview"
+                },
+                "FC06": {
+                    "title": "クラウド統合データ環境 - Autodesk Construction Cloud (ACC)",
+                    "desc": "社内外のサプライヤーとの協調設計および履歴管理に乖離が見られます。ACCを導入することで、常に最新の3DモデルをWeb上でセキュアに共有し、バージョン管理や承認ワークフローを効率化します。",
+                    "url": "https://www.autodesk.com/products/autodesk-construction-cloud/overview"
+                },
+                "FC07": {
+                    "title": "直感的なバーチャル合意形成 - FlexSim VR/AR",
+                    "desc": "意思決定プロセスにおける合意形成スピードの向上に大きなGapがあります。FlexSimのシミュレーションとVR（仮想現実）を連動させ、実物大の工場内を体験しながら検証することで、社内会議の意思決定を劇的に迅速化します。",
+                    "url": "https://www.autodesk.com/products/flexsim/overview"
+                },
+                "FC08": {
+                    "title": "パラメータ駆動型設計自動化 - Inventor iLogic",
+                    "desc": "設計の再利用とバリエーション展開に課題があります。iLogicのルールエンジンを構築することで、注文仕様に応じたアセンブリの自動構成から、製造用図面の自動出力を一気通貫で自動化できます。",
+                    "url": "https://www.autodesk.com/products/inventor/overview"
+                },
+                # 既存のIFMモデル（PE01-PE05, FI01-FI05）からのマッピングフォールバック
+                "PE05": {
+                    "title": "建物・設備デジタルツイン - Autodesk Tandem",
+                    "desc": "運用および保全段階におけるデータの一元管理において乖離が見られます。Autodesk Tandemを導入して建物のデジタルツインを構築し、BIMデータとリアルタイムアセットデータを連携させることで、予知保全をスマートに推進します。",
+                    "url": "https://www.autodesk.com/products/tandem/overview"
+                },
+                "PE03": {
+                    "title": "3D統合コーディネーション - Autodesk Navisworks",
+                    "desc": "設計内容の統合検証・干渉チェックの自動化にGapがあります。Navisworksにより、複数の異なるフォーマットの3Dモデルを単一の環境に統合し、自動干渉検出と変更追跡を行うことで、施工手戻りを防ぎます。",
+                    "url": "https://www.autodesk.com/products/navisworks/overview"
+                }
+            }
+            
+            # Gapが大きい上位2製品を抽出して表示
+            display_count = 0
+            for gap_item in gaps_sorted:
+                qid = gap_item["question_id"]
+                if qid in PRODUCT_PROPOSALS and gap_item["gap"] >= 1: # Gapが1以上あるもののみ推奨
+                    prop = PRODUCT_PROPOSALS[qid]
+                    st.markdown(
+                        f"""
+                        <div class="proposal-card">
+                            <div class="proposal-title">{prop['title']}</div>
+                            <div class="proposal-desc">{prop['desc']}</div>
+                            <a href="{prop['url']}" target="_blank" class="proposal-link-btn">製品の詳細情報を確認する</a>
+                        </div>
+                        """,
+                        unsafe_allow_html=True
+                    )
+                    display_count += 1
+                    if display_count >= 2: # 最大2つ表示
+                        break
+                        
+            if display_count == 0:
+                # 目立ったGapがない場合のデフォルトプレミアム推奨
+                st.markdown(
+                    """
+                    <div class="proposal-card">
+                        <div class="proposal-title">Autodesk Product Design & Manufacturing Collection (PDMC)</div>
+                        <div class="proposal-desc">お客様の全体的な成熟度はすでに非常に高い水準にあります。AutoCAD、Inventor、Factory Design Utilitiesを網羅したPDMCコレクションパッケージをご活用いただくことで、デジタルファクトリー全体のプロセスをさらに統合・洗練できます。</div>
+                        <a href="https://www.autodesk.com/collections/product-design-manufacturing/overview" target="_blank" class="proposal-link-btn">PDMC コレクションの詳細を確認する</a>
+                    </div>
+                    """,
+                    unsafe_allow_html=True
+                )
+                
+            if st.button("アセスメントを再回答する", type="secondary"):
+                st.session_state.is_submitted = False
+                st.session_state.current_step = 0
+                st.rerun()
+
+        elif st.session_state.current_step == 0:
             # --- STEP 0: プロファイル ＆ プライバシーポリシー同意画面 ---
             st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF;'>回答者プロファイル ＆ 同意確認</h3>", unsafe_allow_html=True)
             st.markdown("<p style='color:#D5D5CB; font-size:0.95rem; margin-bottom:20px;'>アセスメントを開始する前に、以下のプロファイル情報の入力と、個人情報の取り扱いへのご同意をお願いいたします。</p>", unsafe_allow_html=True)
@@ -471,7 +658,6 @@ with tab_input:
             slider_container = st.container()
             
             with slider_container:
-                # 境界線
                 st.markdown("<hr style='border-color:#333333; margin:8px 0;'>", unsafe_allow_html=True)
                 col_s1, col_s2 = st.columns(2)
                 with col_s1:
@@ -492,7 +678,6 @@ with tab_input:
             # 1画面に収めるため、余白とフォントサイズをギュッと凝縮したレベルカードを描画
             with levels_container:
                 if not skip:
-                    # HTMLリストの構築 (見出し「成熟度レベル定義 (L1〜L5)」は不要との指示で削除)
                     levels_html = "<div style='display: flex; flex-direction: column; gap: 5px; margin-top: 5px;'>"
                     for lvl in ["L1", "L2", "L3", "L4", "L5"]:
                         lvl_num = int(lvl[1])
@@ -522,7 +707,6 @@ with tab_input:
             
             with profile_container:
                 st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-                # 必要に応じて引っ張り出せるアコーディオン (絵文字を徹底排除)
                 with st.expander("登録プロファイル・個人情報同意事項の確認と変更"):
                     st.markdown("<p style='font-size:0.85rem; color:#D5D5CB; margin-bottom:10px;'>登録情報を変更すると、すべての設問の送信データにリアルタイムに反映されます。</p>", unsafe_allow_html=True)
                     
@@ -583,8 +767,10 @@ with tab_input:
                     st.warning("送信するには個人情報の取り扱いへの同意が必要です（『登録プロファイル・個人情報同意事項の確認と変更』から同意をオンにできます）。")
 
     with col_right_chart:
-        # Step 0 のときは共通のアセット画像を表示、回答中は設問に連動した画像を表示
-        if st.session_state.current_step == 0:
+        # 送信完了後はチャート側の表示を固定
+        if st.session_state.is_submitted:
+            render_hero_image("PE01")
+        elif st.session_state.current_step == 0:
             render_hero_image("PE01") 
         else:
             render_hero_image(qid)
@@ -666,7 +852,7 @@ with tab_input:
             st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
     # 送信処理のバリデーションと実行
-    if st.session_state.current_step == num_questions and submit_clicked:
+    if not st.session_state.is_submitted and st.session_state.current_step == num_questions and submit_clicked:
         res_name = st.session_state.get("res_name", "").strip()
         res_email = st.session_state.get("res_email", "").strip()
         res_exp = st.session_state.get("res_exp")
@@ -731,7 +917,8 @@ with tab_input:
                 
                 if fs_success:
                     st.balloons()
-                    st.success("自己アセスメント回答が安全に送信されました！")
+                    st.session_state.is_submitted = True
+                    st.rerun()
                 else:
                     st.error("送信に失敗しました。管理者にお問い合わせください。")
 
@@ -891,6 +1078,13 @@ if tab_admin:
             with col_ad2:
                 new_creator = st.text_input("作成者名 *", placeholder="例: 佐藤 営業担当")
                 
+            # モデルテンプレートのセレクトボックスを追加 (絵文字を徹底排除)
+            model_template = st.selectbox(
+                "設問モデルテンプレート", 
+                ["IFM 設備管理成熟度アセスメント (デフォルト)", "工場設計・プロダクトクラウド適性診断 (Forma, FlexSim 誘導用)"],
+                key="model_template_select"
+            )
+                
             if new_survey_id.strip():
                 if not re.match(r"^[a-zA-Z0-9\-_]+$", new_survey_id.strip()):
                     st.error("アンケートIDは英数字、ハイフン(-), アンダースコア(_)のみ使用可能です。")
@@ -902,9 +1096,15 @@ if tab_admin:
                             st.success(f"ID: `{new_survey_id}` の既存設定を読み込みました！")
             
             st.subheader("2. 設問テキストのカスタマイズ")
-            default_qs = load_default_questions()
-            custom_questions_data = []
+            all_qs = load_all_questions_json()
             
+            # 選択されたモデルタイプに基づいてベース設問を決定
+            if "工場設計" in model_template:
+                default_qs = all_qs.get("factory_cloud_questions", [])
+            else:
+                default_qs = all_qs.get("questions", [])
+                
+            custom_questions_data = []
             loaded_survey = st.session_state.get(f"loaded_survey_{new_survey_id}")
             existing_qs_map = {}
             if loaded_survey:
@@ -928,7 +1128,7 @@ if tab_admin:
             st.markdown("---")
             if st.button("アンケートを発行・保存する", type="primary", use_container_width=True):
                 if not new_survey_id.strip() or not new_client_name.strip() or not new_creator.strip():
-                    st.error("❌ 必須入力項目をすべて埋めてください。")
+                    st.error("必須入力項目をすべて埋めてください。")
                 else:
                     sid = new_survey_id.strip()
                     success = save_custom_survey(
@@ -938,13 +1138,15 @@ if tab_admin:
                         questions_list=custom_questions_data
                     )
                     if success:
-                        st.success(f"🎉 カスタムアンケート `{sid}` が保存・発行されました！")
-                        prod_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?survey_id={sid}&brand=autodesk"
-                        local_url = f"http://localhost:8501/?survey_id={sid}&brand=autodesk"
+                        st.success(f"カスタムアンケート `{sid}` が保存・発行されました！")
+                        # 新モデルの場合はURLパラメータに &model=factory_cloud を仕込んで配れるように親切設計
+                        model_suffix = "&model=factory_cloud" if "工場設計" in model_template else ""
+                        prod_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?survey_id={sid}&brand=autodesk{model_suffix}"
+                        local_url = f"http://localhost:8501/?survey_id={sid}&brand=autodesk{model_suffix}"
                         
-                        st.info("📋 **顧客配信用リンク (本番環境):**")
+                        st.info("顧客配信用リンク (本番環境):")
                         st.code(prod_url, language=None)
-                        st.info("💻 **テスト用リンク (ローカル環境):**")
+                        st.info("テスト用リンク (ローカル環境):")
                         st.code(local_url, language=None)
         else:
             if admin_pw != "":
