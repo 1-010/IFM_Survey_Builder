@@ -83,6 +83,10 @@ st.markdown(
     div.stButton > button[data-testid="stBaseButton-primary"]:hover {
         background-color: #E5E500 !important; /* Hover effect */
     }
+    /* Force black text color for all child elements of primary button to fix Streamlit's white-text override */
+    div.stButton > button[data-testid="stBaseButton-primary"] * {
+        color: #000000 !important;
+    }
     
     /* Secondary buttons (Transparent/Black Background, White Text, Slate Border) - for navigation */
     div.stButton > button[data-testid="stBaseButton-secondary"] {
@@ -99,12 +103,23 @@ st.markdown(
         border-color: #FFFF00 !important; /* Hover outline highlight in Hello Yellow */
         color: #FFFF00 !important;
     }
+    /* Force white text color for all child elements of secondary button */
+    div.stButton > button[data-testid="stBaseButton-secondary"] * {
+        color: #FFFFFF !important;
+    }
+    /* Force Hello Yellow text color for child elements of secondary button on hover */
+    div.stButton > button[data-testid="stBaseButton-secondary"]:hover * {
+        color: #FFFF00 !important;
+    }
     
     /* Secondary/Navigation buttons when disabled */
     div.stButton > button[disabled] {
         background-color: #1A1A1A !important;
         color: #666666 !important;
         border-color: #333333 !important;
+    }
+    div.stButton > button[disabled] * {
+        color: #666666 !important;
     }
     
     /* 6. Custom Slider & Toggle Accent - Hello Yellow (#FFFF00) */
