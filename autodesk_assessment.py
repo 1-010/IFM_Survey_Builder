@@ -59,28 +59,6 @@ st.markdown(
         border: 1px solid #666666 !important; /* Slate border */
     }
     
-    /* 3. Level Definition Cards - Rounded corners (8px) for interactive highlights */
-    .level-desc-box {
-        background-color: #121212;
-        border-radius: 8px !important; /* 8px for small cards */
-        border: 1px solid #666666;
-        border-left: 4px solid #FFFF00 !important; /* Highlighted with Hello Yellow */
-        padding: 14px 18px;
-        margin-top: 12px;
-        font-size: 0.92rem;
-        color: #D5D5CB; /* Warm Slate text */
-    }
-    .level-desc-box-target {
-        background-color: #121212;
-        border-radius: 8px !important; /* 8px for small cards */
-        border: 1px solid #666666;
-        border-left: 4px solid #D5D5CB !important; /* Secondary Warm Slate */
-        padding: 14px 18px;
-        margin-top: 12px;
-        font-size: 0.92rem;
-        color: #D5D5CB; /* Warm Slate text */
-    }
-    
     /* 4. Inputs & Interactive controls - 8px radius */
     div[data-baseweb="input"], select, textarea {
         border-radius: 8px !important;
@@ -89,8 +67,9 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* 5. Primary Action Buttons - Hello Yellow (#FFFF00) & 4px radius */
-    div.stButton > button:first-child {
+    /* 5. Button Stylings - Contrast & Hierarchy Fixes */
+    /* Primary buttons (Yellow Background, Black Text) - strictly for final actions */
+    div.stButton > button[kind="primary"] {
         background-color: #FFFF00 !important; /* Hello Yellow */
         color: #000000 !important; /* Autodesk Black text */
         border: none !important;
@@ -101,14 +80,31 @@ st.markdown(
         padding: 10px 24px !important;
         transition: all 0.15s ease;
     }
-    div.stButton > button:first-child:hover {
+    div.stButton > button[kind="primary"]:hover {
         background-color: #E5E500 !important; /* Hover effect */
     }
     
-    /* Secondary/Navigation buttons */
+    /* Secondary buttons (Transparent/Black Background, White Text, Slate Border) - for navigation */
+    div.stButton > button[kind="secondary"] {
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
+        border: 1px solid #666666 !important; /* Slate border */
+        border-radius: 4px !important;
+        font-weight: 500 !important;
+        font-size: 0.92rem !important;
+        padding: 10px 24px !important;
+        transition: all 0.15s ease;
+    }
+    div.stButton > button[kind="secondary"]:hover {
+        border-color: #FFFF00 !important; /* Hover outline highlight in Hello Yellow */
+        color: #FFFF00 !important;
+    }
+    
+    /* Secondary/Navigation buttons when disabled */
     div.stButton > button[disabled] {
         background-color: #1A1A1A !important;
         color: #666666 !important;
+        border-color: #333333 !important;
     }
     
     /* 6. Custom Slider & Toggle Accent - Hello Yellow (#FFFF00) */
@@ -393,25 +389,22 @@ with tab_input:
             
             st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
             
-            # プライバシーポリシーのコンプライアンス表示 (スクロールコンテナ風)
-            st.markdown("<h4 style='margin-bottom:8px; font-weight:600; color:#FFFFFF; font-size:1rem;'>個人情報の取り扱いに関する説明事項 *</h4>", unsafe_allow_html=True)
-            privacy_policy_text = """ご提供いただく個人情報（氏名、メールアドレス、部署名等）および自己アセスメントの回答結果は、Autodeskおよびその関係会社により、以下の目的で利用されます。
-1. 本アセスメントの回答結果の集計、スコアリング、および成熟度診断レポートの作成。
-2. 診断結果に基づく、お客様に最適化されたCAD設計・データ管理・建設/製造向けソリューションのご提案。
-3. Autodeskの営業担当者やパートナーからの製品、イベント、トレーニング情報のご提供や各種お問い合わせ対応。
-
-ご提供いただいた情報は、Autodeskのグローバルプライバシーポリシー（https://www.autodesk.com/privacy）に基づき、厳重に管理されます。"""
-            
-            st.markdown(
-                f'<div style="background-color:#121212; border:1px solid #666666; border-radius:8px; padding:15px; max-height:160px; overflow-y:auto; font-size:0.88rem; color:#D5D5CB; line-height:1.5; white-space:pre-wrap;">'
-                f'{privacy_policy_text}'
-                f'</div>',
-                unsafe_allow_html=True
-            )
-            
-            st.markdown("<div style='margin-top:12px;'></div>", unsafe_allow_html=True)
-            agree_privacy = st.checkbox("上記個人情報の取り扱い説明事項を確認し、同意します。", value=st.session_state.get("agree_privacy", False), key="agree_privacy_step0")
+            # 個人情報同意チェックボックス（先にチェック欄を配置）
+            agree_privacy = st.checkbox("個人情報の取り扱い説明事項を確認し、同意します。 *", value=st.session_state.get("agree_privacy", False), key="agree_privacy_step0")
             st.session_state["agree_privacy"] = agree_privacy
+            
+            # 同意チェックが入っていない（False）ときのみ、法務確認済みのポリシー文面（プレースホルダー）を表示
+            # チェックを入れたら「画面左へスッと隠れる（非表示化）」されてレイアウトを圧迫しない設計！
+            if not agree_privacy:
+                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                st.markdown("<b style='font-size:0.85rem; color:#666666;'>【確認用：個人情報保護に関する同意文面（法務確認中プレースホルダー）】</b>", unsafe_allow_html=True)
+                privacy_policy_text = "[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。チェックボックスに同意を入れると、この文面エリアは自動的に非表示になり、アセスメント開始ボタンに素早くアクセスできるようになります。]"
+                st.markdown(
+                    f'<div style="background-color:#121212; border:1px solid #333333; border-radius:8px; padding:15px; font-size:0.88rem; color:#8C9BA5; line-height:1.5; white-space:pre-wrap; transition: all 0.2s ease;">'
+                    f'{privacy_policy_text}'
+                    f'</div>',
+                    unsafe_allow_html=True
+                )
             
             # バリデーションチェック
             inputs_valid = (
@@ -425,7 +418,8 @@ with tab_input:
             st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
             
             # アセスメント開始ボタン (必須事項が埋まっていない、または同意がない場合は押せない)
-            if st.button("自己アセスメントを開始する ➔", disabled=not inputs_valid, use_container_width=True):
+            # 送信や開始などの「決定的なアクション」のみに Hello Yellow (Primary) を適用
+            if st.button("自己アセスメントを開始する ➔", kind="primary", disabled=not inputs_valid, use_container_width=True):
                 st.session_state.current_step = 1
                 st.rerun()
                 
@@ -480,25 +474,48 @@ with tab_input:
                     disabled=skip
                 )
                 
-            # 動的レベル定義カード
+            # --- 【改善】評価定義カードリスト (L1〜L5 の全体像を表示 ＋ 選択された値を動的ハイライト) ---
             if not skip:
-                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                st.markdown("<div style='margin-top:15px; margin-bottom:5px;'><b style='font-size:0.95rem; color:#D5D5CB;'>成熟度レベル定義 (L1〜L5)</b></div>", unsafe_allow_html=True)
                 
-                asis_text = row['levels'][f"L{as_is_val}"]
-                st.markdown(
-                    f"<div class='level-desc-box'>"
-                    f"<b style='color:#FFFF00;'>現在の評価 (Level {as_is_val}) の定義:</b><br>{asis_text}"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
-                
-                tobe_text = row['levels'][f"L{to_be_val}"]
-                st.markdown(
-                    f"<div class='level-desc-box-target'>"
-                    f"<b style='color:#D5D5CB;'>目標の評価 (Level {to_be_val}) の定義:</b><br>{tobe_text}"
-                    f"</div>",
-                    unsafe_allow_html=True
-                )
+                # HTMLリストの構築
+                levels_html = "<div style='display: flex; flex-direction: column; gap: 8px; margin-top: 5px;'>"
+                for lvl in ["L1", "L2", "L3", "L4", "L5"]:
+                    lvl_num = int(lvl[1])
+                    is_asis = (as_is_val == lvl_num)
+                    is_tobe = (to_be_val == lvl_num)
+                    
+                    # カラーマッピング (一致状態によりハイライト枠とバッジを設定)
+                    border_color = "rgba(102, 102, 102, 0.25)" # Slate default
+                    bg_color = "transparent"
+                    badge_html = ""
+                    
+                    if is_asis and is_tobe:
+                        border_color = "#FFFF00" # Hello Yellow
+                        bg_color = "rgba(255, 255, 0, 0.05)"
+                        badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.72rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>As-Is & To-Be</span>"
+                    elif is_asis:
+                        border_color = "#1D91D0" # Twilight Blue
+                        bg_color = "rgba(29, 145, 208, 0.08)"
+                        badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.72rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>As-Is</span>"
+                    elif is_tobe:
+                        border_color = "#2AD0A9" # Morning Green
+                        bg_color = "rgba(42, 208, 169, 0.04)"
+                        badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.72rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>To-Be</span>"
+                        
+                    levels_html += f"""
+                    <div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 10px 14px; border-top: 1px solid rgba(102,102,102,0.15); border-right: 1px solid rgba(102,102,102,0.15); border-bottom: 1px solid rgba(102,102,102,0.15); transition: all 0.2s ease;">
+                        <div style="display: flex; align-items: center; margin-bottom: 3px;">
+                            {badge_html}
+                            <b style="font-size: 0.85rem; color: #D5D5CB;">Level {lvl_num}</b>
+                        </div>
+                        <div style="font-size: 0.88rem; color: #FFFFFF; line-height: 1.45;">
+                            {row['levels'][lvl]}
+                        </div>
+                    </div>
+                    """
+                levels_html += "</div>"
+                st.markdown(levels_html, unsafe_allow_html=True)
                 
             st.markdown("<br><hr style='border-color:#666666; margin:10px 0;'>", unsafe_allow_html=True)
             
@@ -528,19 +545,24 @@ with tab_input:
                 edit_agree = st.checkbox("個人情報の取り扱い説明事項に同意します *", value=st.session_state.get("agree_privacy", False), key="edit_agree")
                 st.session_state["agree_privacy"] = edit_agree
                 
+                # アコーディオン内にもポリシー詳細プレースホルダーを隠して格納
+                if not edit_agree:
+                    st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
+                    st.info("[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。]")
+                
             st.markdown("<br>", unsafe_allow_html=True)
             
-            # ナビゲーションボタン群
+            # ナビゲーションボタン群 (kind="secondary" にして白枠黒背景に変更、視認性 100% 確保)
             col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
             with col_btn1:
                 # 前のステップへ戻る (Step 1のときは Step 0 のプロファイル画面に戻る)
-                if st.button("⬅️ 前の画面", use_container_width=True):
+                if st.button("⬅️ 前の画面", kind="secondary", use_container_width=True):
                     st.session_state.current_step -= 1
                     st.rerun()
                     
             with col_btn2:
                 next_disabled = st.session_state.current_step == num_questions
-                if st.button("次の設問 ➡️", disabled=next_disabled, use_container_width=True):
+                if st.button("次の設問 ➡️", kind="secondary", disabled=next_disabled, use_container_width=True):
                     st.session_state.current_step += 1
                     st.rerun()
                     
@@ -552,7 +574,7 @@ with tab_input:
                     st.session_state.get("res_email", "").strip() != "" and
                     is_valid_email(st.session_state.get("res_email", "")) and
                     st.session_state.get("res_exp") is not None and
-                    st.session_state.get("agree_privacy", False) # 必須：同意が入っていること
+                    st.session_state.get("agree_privacy", False)
                 )
                 submit_disabled = not (is_last_step and profile_valid)
                 submit_clicked = st.button("🏁 アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
@@ -586,6 +608,8 @@ with tab_input:
             
         if plot_categories:
             fig = go.Figure()
+            # Functional Colors: Twilight Blue (#1D91D0) for As-Is, Morning Green (#2AD0A9) for To-Be
+            # Ultra-clean holographic stylings (opacity and thin line)
             fig.add_trace(go.Scatterpolar(
                 r=plot_asis + [plot_asis[0]],
                 theta=plot_categories + [plot_categories[0]],
@@ -639,8 +663,9 @@ with tab_input:
             )
             st.plotly_chart(fig, use_container_width=True)
             
-            # 進捗インジケーター（Step 0 は未回答扱い、Step 1〜10 の回答数でパーセント表示）
             answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
+            
+            # Subtle Progress indicators
             st.progress(answered_count / num_questions)
             st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
@@ -786,7 +811,7 @@ if tab_dashboard:
                     df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
                     df_b = pd.DataFrame()
 
-                # レーダーチャート比較プロット
+                # ... (ダッシュボード比較チャートプロット - 色指定修正)
                 agg_a = df_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
                 agg_a = agg_a.sort_values('question_id')
                 theta_labels = [f"{row['phase']}\n({row['question_id']})" for _, row in agg_a.iterrows()]
