@@ -1,4 +1,10 @@
 import streamlit as st
+
+# URLクエリに brand=autodesk がある場合は、別インスタンスである Autodesk版へルーティング
+if st.query_params.get("brand") == "autodesk":
+    import autodesk_assessment
+    st.stop()
+
 import pandas as pd
 import json
 import plotly.graph_objects as go
