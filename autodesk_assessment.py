@@ -197,7 +197,7 @@ def get_active_questions():
         if custom_survey:
             return pd.DataFrame(custom_survey["questions"]), survey_id, custom_survey.get("client_name")
         else:
-            st.warning(f"⚠️ 指定されたアンケートID `{survey_id}` が登録されていません。デフォルトの設問を表示します。")
+            st.warning(f"指定されたアンケートID `{survey_id}` が登録されていません。デフォルトの設問を表示します。")
     return pd.DataFrame(load_default_questions()), "default", None
 
 q_df, active_survey_id, client_name = get_active_questions()
@@ -355,12 +355,12 @@ except AttributeError:
         pass
 
 if is_client_access:
-    tabs = st.tabs(["📝 アセスメント回答"])
+    tabs = st.tabs(["アセスメント回答"])
     tab_input = tabs[0]
     tab_dashboard = None
     tab_admin = None
 else:
-    tabs = st.tabs(["📝 アセスメント回答", "📊 結果分析", "🔧 営業管理"])
+    tabs = st.tabs(["アセスメント回答", "結果分析", "営業管理"])
     tab_input = tabs[0]
     tab_dashboard = tabs[1]
     tab_admin = tabs[2]
@@ -409,7 +409,6 @@ with tab_input:
             st.session_state["agree_privacy"] = agree_privacy
             
             # 同意チェックが入っていない（False）ときのみ、法務確認済みのポリシー文面（プレースホルダー）を表示
-            # チェックを入れたら「画面左へスッと隠れる（非表示化）」されてレイアウトを圧迫しない設計！
             if not agree_privacy:
                 st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
                 st.markdown("<b style='font-size:0.85rem; color:#666666;'>【確認用：個人情報保護に関する同意文面（法務確認中プレースホルダー）】</b>", unsafe_allow_html=True)
@@ -432,9 +431,8 @@ with tab_input:
             
             st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
             
-            # アセスメント開始ボタン (必須事項が埋まっていない、または同意がない場合は押せない)
-            # 送信や開始などの「決定的なアクション」のみに Hello Yellow (Primary) を適用
-            if st.button("自己アセスメントを開始する ➔", type="primary", disabled=not inputs_valid, use_container_width=True):
+            # アセスメント開始ボタン
+            if st.button("自己アセスメントを開始する", type="primary", disabled=not inputs_valid, use_container_width=True):
                 st.session_state.current_step = 1
                 st.rerun()
                 
@@ -450,12 +448,12 @@ with tab_input:
                 f"{row['department']} 領域  ·  STEP {st.session_state.current_step} / {num_questions}</div>",
                 unsafe_allow_html=True
             )
-            st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:700;'>{row['phase']}</h3>", unsafe_allow_html=True)
+            st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:700;'>{row['question_id']} ({row['phase']})</h3>", unsafe_allow_html=True)
             
-            # 設問カード
+            # 設問カード (無骨な囲み枠の余白を極限まで圧縮し、フォントサイズを最適化して一画面に収める)
             st.markdown(
-                f"<div style='background-color:#121212; padding:20px; border-left:4px solid #FFFF00; margin-bottom:20px; font-size:1.05rem; line-height:1.6; color:#FFFFFF;'>"
-                f"{row['question_text']}</div>", 
+                f"<div style='background-color:#121212; padding:12px 16px; border-left:3px solid #FFFF00; margin-bottom:12px; font-size:0.95rem; line-height:1.5; color:#FFFFFF;'>"
+                f"{row['question_text']} 各レベルの定義を参考に、現状と目標を選択してください。</div>", 
                 unsafe_allow_html=True
             )
             
@@ -465,114 +463,111 @@ with tab_input:
                 st.session_state[skip_key] = False
             skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
             
-            # スライダー
-            asis_key = f"asis_{qid}"
-            tobe_key = f"tobe_{qid}"
-            if asis_key not in st.session_state:
-                st.session_state[asis_key] = 2
-            if tobe_key not in st.session_state:
-                st.session_state[tobe_key] = 4
-                
-            col_s1, col_s2 = st.columns(2)
-            with col_s1:
-                as_is_val = st.slider(
-                    "現状の成熟度評価 (As-Is)", 
-                    1, 5, 
-                    key=asis_key, 
-                    disabled=skip
-                )
-            with col_s2:
-                to_be_val = st.slider(
-                    "将来の目標成熟度 (To-Be)", 
-                    1, 5, 
-                    key=tobe_key, 
-                    disabled=skip
-                )
-                
-            # --- 【改善】評価定義カードリスト (L1〜L5 の全体像を表示 ＋ 選択された値を動的ハイライト) ---
-            if not skip:
-                st.markdown("<div style='margin-top:15px; margin-bottom:5px;'><b style='font-size:0.95rem; color:#D5D5CB;'>成熟度レベル定義 (L1〜L5)</b></div>", unsafe_allow_html=True)
-                
-                # HTMLリストの構築
-                levels_html = "<div style='display: flex; flex-direction: column; gap: 8px; margin-top: 5px;'>"
-                for lvl in ["L1", "L2", "L3", "L4", "L5"]:
-                    lvl_num = int(lvl[1])
-                    is_asis = (as_is_val == lvl_num)
-                    is_tobe = (to_be_val == lvl_num)
-                    
-                    # カラーマッピング (一致状態によりハイライト枠とバッジを設定)
-                    border_color = "rgba(102, 102, 102, 0.25)" # Slate default
-                    bg_color = "transparent"
-                    badge_html = ""
-                    
-                    if is_asis and is_tobe:
-                        border_color = "#FFFF00" # Hello Yellow
-                        bg_color = "rgba(255, 255, 0, 0.05)"
-                        badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.72rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>As-Is & To-Be</span>"
-                    elif is_asis:
-                        border_color = "#1D91D0" # Twilight Blue
-                        bg_color = "rgba(29, 145, 208, 0.08)"
-                        badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.72rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>As-Is</span>"
-                    elif is_tobe:
-                        border_color = "#2AD0A9" # Morning Green
-                        bg_color = "rgba(42, 208, 169, 0.04)"
-                        badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.72rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>To-Be</span>"
+            # プレースホルダー（コンテナ）を作成し、画面順序とパース順序を逆転させてRDP表示を上に持ってくる
+            levels_container = st.container()
+            profile_container = st.container()
+            
+            # 回答用のバー二つは画面の一番下側（送信ボタンのすぐ上）に配置
+            slider_container = st.container()
+            
+            with slider_container:
+                # 境界線
+                st.markdown("<hr style='border-color:#333333; margin:8px 0;'>", unsafe_allow_html=True)
+                col_s1, col_s2 = st.columns(2)
+                with col_s1:
+                    as_is_val = st.slider(
+                        "現状の成熟度評価 (As-Is)", 
+                        1, 5, 
+                        key=f"asis_{qid}", 
+                        disabled=skip
+                    )
+                with col_s2:
+                    to_be_val = st.slider(
+                        "将来の目標成熟度 (To-Be)", 
+                        1, 5, 
+                        key=f"tobe_{qid}", 
+                        disabled=skip
+                    )
+            
+            # 1画面に収めるため、余白とフォントサイズをギュッと凝縮したレベルカードを描画
+            with levels_container:
+                if not skip:
+                    # HTMLリストの構築 (見出し「成熟度レベル定義 (L1〜L5)」は不要との指示で削除)
+                    levels_html = "<div style='display: flex; flex-direction: column; gap: 5px; margin-top: 5px;'>"
+                    for lvl in ["L1", "L2", "L3", "L4", "L5"]:
+                        lvl_num = int(lvl[1])
+                        is_asis = (as_is_val == lvl_num)
+                        is_tobe = (to_be_val == lvl_num)
                         
-                    levels_html += f'<div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 10px 14px; border-top: 1px solid rgba(102,102,102,0.15); border-right: 1px solid rgba(102,102,102,0.15); border-bottom: 1px solid rgba(102,102,102,0.15); transition: all 0.2s ease;"><div style="display: flex; align-items: center; margin-bottom: 3px;">{badge_html}<b style="font-size: 0.85rem; color: #D5D5CB;">Level {lvl_num}</b></div><div style="font-size: 0.88rem; color: #FFFFFF; line-height: 1.45;">{row["levels"][lvl]}</div></div>'
-                levels_html += "</div>"
-                st.markdown(levels_html, unsafe_allow_html=True)
-                
-            st.markdown("<br><hr style='border-color:#666666; margin:10px 0;'>", unsafe_allow_html=True)
+                        border_color = "rgba(102, 102, 102, 0.2)" 
+                        bg_color = "transparent"
+                        badge_html = ""
+                        
+                        if is_asis and is_tobe:
+                            border_color = "#FFFF00" 
+                            bg_color = "rgba(255, 255, 0, 0.04)"
+                            badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>As-Is & To-Be</span>"
+                        elif is_asis:
+                            border_color = "#1D91D0" 
+                            bg_color = "rgba(29, 145, 208, 0.06)"
+                            badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>As-Is</span>"
+                        elif is_tobe:
+                            border_color = "#2AD0A9" 
+                            bg_color = "rgba(42, 208, 169, 0.03)"
+                            badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>To-Be</span>"
+                            
+                        levels_html += f'<div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 6px 12px; border-top: 1px solid rgba(102,102,102,0.1); border-right: 1px solid rgba(102,102,102,0.1); border-bottom: 1px solid rgba(102,102,102,0.1); transition: all 0.15s ease;"><div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<b style="font-size: 0.8rem; color: #D5D5CB;">Level {lvl_num}</b></div><div style="font-size: 0.82rem; color: #FFFFFF; line-height: 1.35;">{row["levels"][lvl]}</div></div>'
+                    levels_html += "</div>"
+                    st.markdown(levels_html, unsafe_allow_html=True)
             
-            # 必要に応じて引っ張り出せるアコーディオン (プロファイル ＆ 同意書の再確認/編集)
-            with st.expander("👤 登録プロファイル・個人情報同意事項の確認と変更"):
-                st.markdown("<p style='font-size:0.85rem; color:#D5D5CB; margin-bottom:10px;'>登録情報を変更すると、すべての設問の送信データにリアルタイムに反映されます。</p>", unsafe_allow_html=True)
+            with profile_container:
+                st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
+                # 必要に応じて引っ張り出せるアコーディオン (絵文字を徹底排除)
+                with st.expander("登録プロファイル・個人情報同意事項の確認と変更"):
+                    st.markdown("<p style='font-size:0.85rem; color:#D5D5CB; margin-bottom:10px;'>登録情報を変更すると、すべての設問の送信データにリアルタイムに反映されます。</p>", unsafe_allow_html=True)
+                    
+                    edit_name = st.text_input("回答者名 *", value=st.session_state.get("res_name", ""), key="edit_name")
+                    st.session_state["res_name"] = edit_name
+                    
+                    edit_email = st.text_input("メールアドレス *", value=st.session_state.get("res_email", ""), key="edit_email")
+                    st.session_state["res_email"] = edit_email
+                    
+                    edit_exp = st.selectbox(
+                        "勤続年数 *",
+                        ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"],
+                        index=["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"].index(st.session_state.get("res_exp")) if st.session_state.get("res_exp") in ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"] else 0,
+                        key="edit_exp"
+                    )
+                    st.session_state["res_exp"] = edit_exp
+                    
+                    edit_team = st.text_input("部署名・チーム名 (任意)", value=st.session_state.get("res_team", ""), key="edit_team")
+                    st.session_state["res_team"] = edit_team
+                    
+                    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
+                    st.markdown("<b style='font-size:0.88rem; color:#FFFFFF;'>【同意ステータス】</b>", unsafe_allow_html=True)
+                    edit_agree = st.checkbox("個人情報の取り扱い説明事項に同意します *", value=st.session_state.get("agree_privacy", False), key="edit_agree")
+                    st.session_state["agree_privacy"] = edit_agree
+                    
+                    if not edit_agree:
+                        st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
+                        st.info("[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。]")
                 
-                edit_name = st.text_input("回答者名 *", value=st.session_state.get("res_name", ""), key="edit_name")
-                st.session_state["res_name"] = edit_name
-                
-                edit_email = st.text_input("メールアドレス *", value=st.session_state.get("res_email", ""), key="edit_email")
-                st.session_state["res_email"] = edit_email
-                
-                edit_exp = st.selectbox(
-                    "勤続年数 *",
-                    ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"],
-                    index=["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"].index(st.session_state.get("res_exp")) if st.session_state.get("res_exp") in ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"] else 0,
-                    key="edit_exp"
-                )
-                st.session_state["res_exp"] = edit_exp
-                
-                edit_team = st.text_input("部署名・チーム名 (任意)", value=st.session_state.get("res_team", ""), key="edit_team")
-                st.session_state["res_team"] = edit_team
-                
-                st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-                st.markdown("<b style='font-size:0.88rem; color:#FFFFFF;'>【同意ステータス】</b>", unsafe_allow_html=True)
-                edit_agree = st.checkbox("個人情報の取り扱い説明事項に同意します *", value=st.session_state.get("agree_privacy", False), key="edit_agree")
-                st.session_state["agree_privacy"] = edit_agree
-                
-                # アコーディオン内にもポリシー詳細プレースホルダーを隠して格納
-                if not edit_agree:
-                    st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
-                    st.info("[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。]")
-                
-            st.markdown("<br>", unsafe_allow_html=True)
+            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
             
-            # ナビゲーションボタン群 (type="secondary" にして白枠黒背景に変更、視認性 100% 確保)
+            # ナビゲーションボタン群 (絵文字を徹底排除、type="secondary" による対比)
             col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
             with col_btn1:
-                # 前のステップへ戻る (Step 1のときは Step 0 のプロファイル画面に戻る)
-                if st.button("⬅️ 前の画面", type="secondary", use_container_width=True):
+                if st.button("前の画面", type="secondary", use_container_width=True):
                     st.session_state.current_step -= 1
                     st.rerun()
                     
             with col_btn2:
                 next_disabled = st.session_state.current_step == num_questions
-                if st.button("次の設問 ➡️", type="secondary", disabled=next_disabled, use_container_width=True):
+                if st.button("次の設問", type="secondary", disabled=next_disabled, use_container_width=True):
                     st.session_state.current_step += 1
                     st.rerun()
                     
             with col_btn3:
-                # 最終送信条件: 同意チェックがONであり、かつ必須項目がすべて正しく入力されていること
                 is_last_step = st.session_state.current_step == num_questions
                 profile_valid = (
                     st.session_state.get("res_name", "").strip() != "" and
@@ -582,20 +577,19 @@ with tab_input:
                     st.session_state.get("agree_privacy", False)
                 )
                 submit_disabled = not (is_last_step and profile_valid)
-                submit_clicked = st.button("🏁 アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
+                submit_clicked = st.button("アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
                 
-                # 同意が外れている場合に警告メッセージを表示する親切設計
                 if is_last_step and not st.session_state.get("agree_privacy", False):
-                    st.warning("⚠️ 送信するには個人情報の取り扱いへの同意が必要です（『登録プロファイル・個人情報同意事項の確認と変更』から同意をONにできます）。")
+                    st.warning("送信するには個人情報の取り扱いへの同意が必要です（『登録プロファイル・個人情報同意事項の確認と変更』から同意をオンにできます）。")
 
     with col_right_chart:
         # Step 0 のときは共通のアセット画像を表示、回答中は設問に連動した画像を表示
         if st.session_state.current_step == 0:
-            render_hero_image("PE01") # デフォルトで美麗なデジタルファクトリー画像
+            render_hero_image("PE01") 
         else:
             render_hero_image(qid)
             
-        st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>🛰️ ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
         
         plot_categories = []
         plot_asis = []
@@ -613,8 +607,6 @@ with tab_input:
             
         if plot_categories:
             fig = go.Figure()
-            # Functional Colors: Twilight Blue (#1D91D0) for As-Is, Morning Green (#2AD0A9) for To-Be
-            # Ultra-clean holographic stylings (opacity and thin line)
             fig.add_trace(go.Scatterpolar(
                 r=plot_asis + [plot_asis[0]],
                 theta=plot_categories + [plot_categories[0]],
@@ -670,7 +662,6 @@ with tab_input:
             
             answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
             
-            # Subtle Progress indicators
             st.progress(answered_count / num_questions)
             st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
@@ -683,13 +674,13 @@ with tab_input:
         agree_privacy = st.session_state.get("agree_privacy", False)
         
         if not res_name:
-            st.error("❌ 回答者名を入力してください。")
+            st.error("回答者名を入力してください。")
         elif not res_email or not is_valid_email(res_email):
-            st.error("❌ 有効なメールアドレスを入力してください。")
+            st.error("有効なメールアドレスを入力してください。")
         elif not res_exp:
-            st.error("❌ 勤続年数を選択してください。")
+            st.error("勤続年数を選択してください。")
         elif not agree_privacy:
-            st.error("❌ 個人情報の取り扱いへの同意が必要です。")
+            st.error("個人情報の取り扱いへの同意が必要です。")
         else:
             timestamp = datetime.now().isoformat()
             records = []
@@ -740,15 +731,15 @@ with tab_input:
                 
                 if fs_success:
                     st.balloons()
-                    st.success("🎉 自己アセスメント回答が安全に送信されました！")
+                    st.success("自己アセスメント回答が安全に送信されました！")
                 else:
-                    st.error("❌ 送信に失敗しました。管理者にお問い合わせください。")
+                    st.error("送信に失敗しました。管理者にお問い合わせください。")
 
 
 ### 📊 Tab 2: 結果分析ダッシュボード ###
 if tab_dashboard:
     with tab_dashboard:
-        st.header("📊 成熟度アセスメントの分析・比較")
+        st.header("成熟度アセスメントの分析・比較")
         dash_pw = st.text_input("結果分析ダッシュボード閲覧用パスワード", type="password", key="dash_pw_input")
         
         if dash_pw == "ifm-sales":
@@ -758,8 +749,8 @@ if tab_dashboard:
             if resp_df.empty:
                 st.warning("現在、回答データが存在しません。")
             else:
-                st.subheader("📊 絞り込みとグループ比較")
-                compare_mode = st.checkbox("👥 2つのグループを比較する（比較モード）", value=False, key="dash_compare")
+                st.subheader("絞り込みとグループ比較")
+                compare_mode = st.checkbox("2つのグループを比較する（比較モード）", value=False, key="dash_compare")
                 
                 unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
                 registered_surveys = get_all_custom_survey_ids()
@@ -785,7 +776,7 @@ if tab_dashboard:
                 if compare_mode:
                     col_filter_a, col_filter_b = st.columns(2)
                     with col_filter_a:
-                        st.markdown("#### 🔵 グループA の条件")
+                        st.markdown("#### グループA の条件")
                         survey_a = st.selectbox("アンケートID (グループA)", ["すべて"] + unique_surveys, key="survey_a")
                         domain_a = st.selectbox("ドメイン (グループA)", ["すべて"] + unique_domains, key="domain_a")
                         exp_a = st.selectbox("勤続年数 (グループA)", unique_years, key="exp_a")
@@ -793,7 +784,7 @@ if tab_dashboard:
                         cat_a = st.radio("表示カテゴリ (グループA)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_a", horizontal=True)
                         
                     with col_filter_b:
-                        st.markdown("#### 🟠 グループB の条件")
+                        st.markdown("#### グループB の条件")
                         survey_b = st.selectbox("アンケートID (グループB)", ["すべて"] + unique_surveys, key="survey_b")
                         domain_b = st.selectbox("ドメイン (グループB)", ["すべて"] + unique_domains, key="domain_b")
                         exp_b = st.selectbox("勤続年数 (グループB)", unique_years, key="exp_b")
@@ -816,7 +807,7 @@ if tab_dashboard:
                     df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
                     df_b = pd.DataFrame()
 
-                # ... (ダッシュボード比較チャートプロット - 色指定修正)
+                # レーダーチャート比較プロット
                 agg_a = df_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
                 agg_a = agg_a.sort_values('question_id')
                 theta_labels = [f"{row['phase']}\n({row['question_id']})" for _, row in agg_a.iterrows()]
@@ -886,7 +877,7 @@ if tab_dashboard:
 ### 🔧 Tab 3: 営業管理（カスタム発行） ###
 if tab_admin:
     with tab_admin:
-        st.header("🔧 営業担当用 カスタムアンケート発行管理")
+        st.header("営業担当用 カスタムアンケート発行管理")
         admin_pw = st.text_input("管理用パスワード", type="password", key="admin_pw_input")
         
         if admin_pw == "ifm-sales":
@@ -902,7 +893,7 @@ if tab_admin:
                 
             if new_survey_id.strip():
                 if not re.match(r"^[a-zA-Z0-9\-_]+$", new_survey_id.strip()):
-                    st.error("⚠️ アンケートIDは英数字、ハイフン(-), アンダースコア(_)のみ使用可能です。")
+                    st.error("アンケートIDは英数字、ハイフン(-), アンダースコア(_)のみ使用可能です。")
                 else:
                     if st.button("既存のカスタム設問を読み込む (IDが存在する場合)"):
                         existing = get_custom_survey(new_survey_id.strip())
