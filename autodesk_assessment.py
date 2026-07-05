@@ -22,69 +22,124 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_JSON = SCRIPT_DIR / "data" / "ifm_questions.json"
 IMAGES_DIR = SCRIPT_DIR / "data" / "images"
 
-# Autodesk Brand Global CSS Styling Injection for Museum-like Minimalism
+# Autodesk Brand Official Color & Layout Guidelines Integration
+# Primary: Black (#000000), White (#FFFFFF), Hello Yellow (#FFFF00)
+# Secondary: Warm Slate (#D5D5CB), Slate (#666666)
+# Tertiary (Functional): Dawn (#F09D4F), Dusk (#F2520A), Twilight (#1D91D0), Morning (#2AD0A9)
+# Radii Scale: Buttons/Tags = 4px, Inputs/Small Cards = 8px, Structural Containers/Images = 0px (Sharp)
 st.markdown(
     """
     <style>
-    /* Autodesk Brand Theme Overrides */
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
+    /* 1. Global Color Canvas (Autodesk Black & White) */
     html, body, [data-testid="stAppViewContainer"] {
-        background-color: #0B0B0B !important; /* Rich Dark Charcoal */
-        color: #E6E6E6 !important; /* Autodesk Clay Light Gray */
+        background-color: #000000 !important; /* Pure Autodesk Black */
+        color: #FFFFFF !important; /* Pure Autodesk White */
         font-family: 'Inter', sans-serif !important;
     }
     
-    /* Input & Text Colors */
     h1, h2, h3, h4, h5, h6, label, span, p {
-        color: #E6E6E6 !important;
+        color: #FFFFFF !important;
     }
     
-    /* Clean headings */
-    h1 {
-        font-size: 2.2rem !important;
-        font-weight: 700 !important;
-        letter-spacing: -0.03em !important;
-        margin-bottom: 0.2rem !important;
-    }
-    
-    /* Layout card styling - Minimal borders, high whitespace */
+    /* 2. Structural Elements - Sharp Corners (0px) for precision */
     div[data-testid="stVerticalBlockBorderWrapper"] > div {
-        border-radius: 0px !important; /* Flat industrial edges */
+        border-radius: 0px !important; /* Sharp corners per layout guidelines */
         border: none !important;
-        border-left: 1px solid #1F1F1F !important;
+        border-left: 1px solid #666666 !important; /* Slate divider line */
         background-color: transparent !important;
         padding: 0px 24px !important;
         box-shadow: none !important;
     }
     
-    /* Left column card formatting */
-    .question-card {
-        background-color: #121212;
-        border: 1px solid #1F1F1F;
-        padding: 24px;
-        margin-bottom: 20px;
+    /* Sharp corners for Images */
+    .stImage img {
+        border-radius: 0px !important; /* Sharp corners for structural images */
+        border: 1px solid #666666 !important; /* Slate border */
     }
     
-    /* Dynamic Level Definition Cards */
+    /* 3. Level Definition Cards - Rounded corners (8px) for interactive highlights */
     .level-desc-box {
-        background-color: #161616;
-        border-left: 3px solid #0696D7;
-        padding: 12px 16px;
-        margin-top: 10px;
+        background-color: #121212;
+        border-radius: 8px !important; /* 8px for small cards */
+        border: 1px solid #666666;
+        border-left: 4px solid #FFFF00 !important; /* Highlighted with Hello Yellow */
+        padding: 14px 18px;
+        margin-top: 12px;
         font-size: 0.92rem;
-        color: #C0C0C0;
+        color: #D5D5CB; /* Warm Slate text */
     }
     .level-desc-box-target {
-        background-color: #161616;
-        border-left: 3px solid #8C9BA5;
-        padding: 12px 16px;
-        margin-top: 10px;
+        background-color: #121212;
+        border-radius: 8px !important; /* 8px for small cards */
+        border: 1px solid #666666;
+        border-left: 4px solid #D5D5CB !important; /* Secondary Warm Slate */
+        padding: 14px 18px;
+        margin-top: 12px;
         font-size: 0.92rem;
-        color: #C0C0C0;
+        color: #D5D5CB; /* Warm Slate text */
     }
     
-    /* Hide Streamlit Default branding & menus globally */
+    /* 4. Inputs & Interactive controls - 8px radius */
+    div[data-baseweb="input"], select, textarea {
+        border-radius: 8px !important;
+        border: 1px solid #666666 !important;
+        background-color: #121212 !important;
+        color: #FFFFFF !important;
+    }
+    
+    /* 5. Primary Action Buttons - Hello Yellow (#FFFF00) & 4px radius */
+    div.stButton > button:first-child {
+        background-color: #FFFF00 !important; /* Hello Yellow */
+        color: #000000 !important; /* Autodesk Black text */
+        border: none !important;
+        border-radius: 4px !important; /* 4px for buttons */
+        font-weight: 700 !important;
+        font-size: 0.92rem !important;
+        letter-spacing: 0.05em !important;
+        padding: 10px 24px !important;
+        transition: all 0.15s ease;
+    }
+    div.stButton > button:first-child:hover {
+        background-color: #E5E500 !important; /* Hover effect */
+    }
+    
+    /* Secondary/Navigation buttons */
+    div.stButton > button[disabled] {
+        background-color: #1A1A1A !important;
+        color: #666666 !important;
+    }
+    
+    /* 6. Custom Slider & Toggle Accent - Hello Yellow (#FFFF00) */
+    div[role="slider"] {
+        background-color: #FFFF00 !important; /* Hello Yellow thumb */
+    }
+    .stSlider > div {
+        color: #FFFF00 !important;
+    }
+    /* Toggle active track styling */
+    div[data-testid="stCheckbox"] > label > div:first-child {
+        background-color: #FFFF00 !important;
+    }
+    
+    /* Clean Tab bars */
+    button[data-baseweb="tab"] {
+        color: #D5D5CB !important; /* Warm Slate */
+        font-size: 0.95rem !important;
+        border-bottom-width: 2px !important;
+    }
+    button[data-baseweb="tab"][aria-selected="true"] {
+        color: #FFFF00 !important; /* Hello Yellow active tab */
+        border-bottom-color: #FFFF00 !important;
+    }
+    
+    /* Clean Progress Bar */
+    .stProgress > div > div > div {
+        background-color: #FFFF00 !important; /* Hello Yellow progress */
+    }
+    
+    /* Hide Streamlit Default UI Noise */
     header {visibility: hidden; display: none !important;}
     footer {visibility: hidden; display: none !important;}
     #MainMenu {visibility: hidden; display: none !important;}
@@ -92,52 +147,7 @@ st.markdown(
     [class*="viewerBadge"] {display: none !important;}
     div[data-testid="stStatusWidget"] {visibility: hidden; display: none !important;}
     
-    /* Custom Slider Accent (Autodesk Cyan) */
-    div[role="slider"] {
-        background-color: #0696D7 !important;
-    }
-    .stSlider > div {
-        color: #0696D7 !important;
-    }
-    
-    /* Buttons styling - Flat & Minimalist */
-    div.stButton > button:first-child {
-        background-color: #0696D7 !important;
-        color: #FFFFFF !important;
-        border: none !important;
-        border-radius: 2px !important;
-        font-weight: 500 !important;
-        font-size: 0.9rem !important;
-        letter-spacing: 0.05em !important;
-        padding: 8px 20px !important;
-        transition: all 0.15s ease;
-    }
-    div.stButton > button:first-child:hover {
-        background-color: #0080B8 !important;
-    }
-    
-    /* Secondary/Navigation buttons */
-    div.stButton > button[disabled] {
-        background-color: #1A1A1A !important;
-        color: #555555 !important;
-    }
-    
-    /* Tab bar color override */
-    button[data-baseweb="tab"] {
-        color: #8C9BA5 !important;
-        font-size: 0.95rem !important;
-    }
-    button[data-baseweb="tab"][aria-selected="true"] {
-        color: #0696D7 !important;
-        border-bottom-color: #0696D7 !important;
-    }
-    
-    /* Navigation Progress Bar styling */
-    .stProgress > div > div > div {
-        background-color: #0696D7 !important;
-    }
-    
-    /* Make the right visual & chart sticky on large screens */
+    /* Sticky Right Column Visuals */
     @media (min-width: 992px) {
         div[data-testid="stColumn"]:nth-child(2) {
             position: -webkit-sticky;
@@ -161,6 +171,7 @@ def load_default_questions():
     return data["questions"]
 
 def get_active_questions():
+    # 安全にクエリパラメータを取得（新旧バージョン互換性ハック）
     survey_id = None
     try:
         survey_id = st.query_params.get("survey_id")
@@ -274,13 +285,13 @@ if q_df.empty:
 
 # Question ID to Autodesk Brand Image Mapping Table
 IMAGE_MAPPING = {
-    "FI01": "fy27-aec-forma-industry-cloud-imagery.webp", # Forma
+    "FI01": "fy27-aec-forma-industry-cloud-imagery.webp",
     "FI02": "brand-image-prototype-1-dark.webp",
     "FI03": "Construction-CCEED-China-0644_with_overlay.webp",
     "FI04": "fy27-water-image-02.webp",
-    "PE01": "fy27-dm-digital-factory-campaign-visual-01.webp", # Factory Design
-    "PE02": "fy27-dm-fusion-industry-cloud-imagery.webp", # Fusion/Inventor
-    "PE03": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp", # Robots
+    "PE01": "fy27-dm-digital-factory-campaign-visual-01.webp",
+    "PE02": "fy27-dm-fusion-industry-cloud-imagery.webp",
+    "PE03": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp",
     "PE04": "brand-image-prototype-4-dark.webp"
 }
 
@@ -295,20 +306,19 @@ def render_hero_image(qid):
     st.markdown(
         """
         <div style="
-            border: 1px dashed #2A2A2A; 
-            background: linear-gradient(135deg, #161616 25%, #222222 25%, #222222 50%, #161616 50%, #161616 75%, #222222 75%, #222222 100%);
-            background-size: 20px 20px;
+            border: 1px solid #666666; 
+            background-color: #121212;
             height: 220px; 
             display: flex; 
             align-items: center; 
             justify-content: center;
-            border-radius: 2px;
-            color: #5F6B73;
+            border-radius: 0px;
+            color: #D5D5CB;
             font-size: 0.9rem;
             font-family: monospace;
             margin-bottom: 20px;
         ">
-        [ AUTODESK // PRECISION_DRAFT_HERO ]
+        [ AUTODESK // PRECISION_DESIGN_SYSTEM ]
         </div>
         """,
         unsafe_allow_html=True
@@ -323,12 +333,12 @@ with col_header_logo:
             svg_content = f.read()
         st.markdown(f'<div style="margin-top: 14px; width: 140px;">{svg_content}</div>', unsafe_allow_html=True)
     else:
-        st.markdown("<h2 style='color:#0696D7; margin:0;'>AUTODESK</h2>", unsafe_allow_html=True)
+        st.markdown("<h2 style='color:#FFFF00; margin:0;'>AUTODESK</h2>", unsafe_allow_html=True)
 
 with col_header_text:
-    st.markdown("<h1 style='margin:0;'>IFM Maturity Assessment</h1>", unsafe_allow_html=True)
+    st.markdown("<h1 style='margin:0; font-weight:700;'>IFM Maturity Assessment</h1>", unsafe_allow_html=True)
 
-st.markdown("<hr style='border-color:#1F1F1F; margin-top:10px; margin-bottom:20px;'>", unsafe_allow_html=True)
+st.markdown("<hr style='border-color:#666666; margin-top:10px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
 # Hide Navigation Tabs for Clients
 is_client_access = False
@@ -353,19 +363,15 @@ else:
 
 ### 📝 Tab 1: 回答入力フォーム ###
 with tab_input:
-    # 2カラムレイアウト構築 (左: 設問コントロール / 右: ヒーロービジュアル ＆ ライブレーダーチャート)
     col_left_form, col_right_chart = st.columns([11, 9])
     
-    # セッションによるステップ状態（1問1答）の管理
     if "current_step" not in st.session_state:
         st.session_state.current_step = 0
         
     num_questions = len(q_df)
     
-    # ユーザー属性入力（最初のステップの前に表示するか、ステップ0に組み込む）
     with col_left_form:
-        # 回答者属性情報の入力コンテナ（未完了時は常に上部にコンパクトに表示）
-        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#8C9BA5;'>1. 回答者プロファイル</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>1. 回答者プロファイル</h4>", unsafe_allow_html=True)
         col_attr1, col_attr2 = st.columns(2)
         with col_attr1:
             respondent_name = st.text_input("回答者名 *", placeholder="氏名をご記入ください", value=st.session_state.get("res_name", ""))
@@ -384,38 +390,32 @@ with tab_input:
             specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: 生産技術部", value=st.session_state.get("res_team", ""))
             st.session_state["res_team"] = specific_team
         
-        st.markdown("<hr style='border-color:#1F1F1F; margin:20px 0;'>", unsafe_allow_html=True)
+        st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
         
-        # 設問エリア
-        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#8C9BA5;'>2. 自己成熟度評価</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-bottom:10px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>2. 自己成熟度評価</h4>", unsafe_allow_html=True)
         
-        # 現在の質問オブジェクトを取得
         current_idx = st.session_state.current_step
         row = q_df.iloc[current_idx]
         qid = row['question_id']
         
-        # ステップナビゲーション表示
         st.markdown(
-            f"<div style='font-size:0.85rem; color:#0696D7; font-weight:600; text-transform:uppercase; letter-spacing:0.08em;'>"
+            f"<div style='font-size:0.85rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
             f"{row['department']} 領域  ·  STEP {current_idx + 1} / {num_questions}</div>",
             unsafe_allow_html=True
         )
-        st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:600;'>{row['phase']}</h3>", unsafe_allow_html=True)
+        st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:700;'>{row['phase']}</h3>", unsafe_allow_html=True)
         
-        # 質問文のカード表示
         st.markdown(
-            f"<div style='background-color:#141414; padding:20px; border-left:3px solid #0696D7; margin-bottom:20px; font-size:1.05rem; line-height:1.6; color:#D4D4D4;'>"
+            f"<div style='background-color:#121212; padding:20px; border-left:4px solid #FFFF00; margin-bottom:20px; font-size:1.05rem; line-height:1.6; color:#FFFFFF;'>"
             f"{row['question_text']}</div>", 
             unsafe_allow_html=True
         )
         
-        # スキップトグル
         skip_key = f"skip_{qid}"
         if skip_key not in st.session_state:
             st.session_state[skip_key] = False
         skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
         
-        # スライダー配置
         asis_key = f"asis_{qid}"
         tobe_key = f"tobe_{qid}"
         if asis_key not in st.session_state:
@@ -439,31 +439,27 @@ with tab_input:
                 disabled=skip
             )
             
-        # 動的なレベル定義のテキストカード表示 (st.table を排し、選択された数値の定義のみをクリーンに表示！)
         if not skip:
             st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
             
-            # As-Is の定義テキスト
             asis_text = row['levels'][f"L{as_is_val}"]
             st.markdown(
                 f"<div class='level-desc-box'>"
-                f"<b>現在の評価 (Level {as_is_val}) の定義:</b><br>{asis_text}"
+                f"<b style='color:#FFFF00;'>現在の評価 (Level {as_is_val}) の定義:</b><br>{asis_text}"
                 f"</div>",
                 unsafe_allow_html=True
             )
             
-            # To-Be の定義テキスト
             tobe_text = row['levels'][f"L{to_be_val}"]
             st.markdown(
                 f"<div class='level-desc-box-target'>"
-                f"<b>目標の評価 (Level {to_be_val}) の定義:</b><br>{tobe_text}"
+                f"<b style='color:#D5D5CB;'>目標の評価 (Level {to_be_val}) の定義:</b><br>{tobe_text}"
                 f"</div>",
                 unsafe_allow_html=True
             )
             
         st.markdown("<br>", unsafe_allow_html=True)
         
-        # ステップ送りボタンのレイアウト
         col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
         with col_btn1:
             prev_disabled = st.session_state.current_step == 0
@@ -478,19 +474,15 @@ with tab_input:
                 st.rerun()
                 
         with col_btn3:
-            # 全問回答完了時の送信アクション
             is_last_step = st.session_state.current_step == num_questions - 1
             submit_disabled = not is_last_step
             submit_clicked = st.button("🏁 アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
 
-    # 右カラム: ヒーローイメージ（現在ステップ同期） ＆ リアルタイムレーダーチャート
     with col_right_chart:
-        # 現在アクティブな設問のヒーロービジュアルを上部にクリーンに固定表示
         render_hero_image(qid)
         
-        st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#8C9BA5;'>🛰️ ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>🛰️ ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
         
-        # リアルタイムで現在までの回答状態をマージしてプロット
         plot_categories = []
         plot_asis = []
         plot_tobe = []
@@ -507,14 +499,14 @@ with tab_input:
             
         if plot_categories:
             fig = go.Figure()
-            # 閉じたラインにするために最初の要素を末尾に追加
+            # Functional Colors: Twilight Blue (#1D91D0) for As-Is, Morning Green (#2AD0A9) for To-Be
             fig.add_trace(go.Scatterpolar(
                 r=plot_asis + [plot_asis[0]],
                 theta=plot_categories + [plot_categories[0]],
                 fill='toself',
                 name='現在の評価 (As-Is)',
-                line_color='#0696D7',
-                fillcolor='rgba(6, 150, 215, 0.15)',
+                line_color='#1D91D0',
+                fillcolor='rgba(29, 145, 208, 0.15)',
                 line=dict(width=2),
                 opacity=0.7
             ))
@@ -523,8 +515,8 @@ with tab_input:
                 theta=plot_categories + [plot_categories[0]],
                 fill='toself',
                 name='将来の目標 (To-Be)',
-                line_color='#8C9BA5',
-                fillcolor='rgba(140, 155, 165, 0.08)',
+                line_color='#2AD0A9',
+                fillcolor='rgba(42, 208, 169, 0.08)',
                 line=dict(width=1.5, dash='dash'),
                 opacity=0.5
             ))
@@ -535,16 +527,16 @@ with tab_input:
                         visible=True,
                         range=[0, 5],
                         tickvals=[1, 2, 3, 4, 5],
-                        gridcolor='#1C1C1C',
-                        linecolor='#1C1C1C',
-                        tickfont=dict(color='#8C9BA5', size=9)
+                        gridcolor='#232323',
+                        linecolor='#232323',
+                        tickfont=dict(color='#D5D5CB', size=9)
                     ),
                     angularaxis=dict(
-                        gridcolor='#1C1C1C',
-                        linecolor='#1C1C1C',
-                        tickfont=dict(color='#E6E6E6', size=9)
+                        gridcolor='#232323',
+                        linecolor='#232323',
+                        tickfont=dict(color='#FFFFFF', size=9)
                     ),
-                    bgcolor='#0E0E0E'
+                    bgcolor='#0A0A0A'
                 ),
                 showlegend=True,
                 legend=dict(
@@ -553,22 +545,20 @@ with tab_input:
                     y=-0.22,
                     xanchor="center",
                     x=0.5,
-                    font=dict(color='#E6E6E6', size=10)
+                    font=dict(color='#FFFFFF', size=10)
                 ),
-                paper_bgcolor='#0B0B0B',
+                paper_bgcolor='#000000',
                 margin=dict(l=50, r=50, t=10, b=40)
             )
             st.plotly_chart(fig, use_container_width=True)
             
-            # リアルタイム簡易進捗インジケーター（1問1答形式での進捗）
             answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
             st.progress(answered_count / num_questions)
-            st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#8C9BA5; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#D5D5CB; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
-    # 送信処理のバリデーションと実行
     if submit_clicked:
         if not respondent_name.strip():
-            st.error("❌ 回回答者名を入力してください。")
+            st.error("❌ 回答者名を入力してください。")
         elif not email_input.strip() or not is_valid_email(email_input):
             st.error("❌ 有効なメールアドレスを入力してください。")
         elif not experience_years:
@@ -711,16 +701,16 @@ if tab_dashboard:
                         theta=theta_labels + [theta_labels[0]],
                         fill='toself',
                         name='グループA: 現状の評価',
-                        line_color='#0696D7',
-                        fillcolor='rgba(6, 150, 215, 0.2)'
+                        line_color='#1D91D0',
+                        fillcolor='rgba(29, 145, 208, 0.2)'
                     ))
                     fig.add_trace(go.Scatterpolar(
                         r=agg_a['to_be'].tolist() + [agg_a['to_be'].tolist()[0]],
                         theta=theta_labels + [theta_labels[0]],
                         fill='toself',
                         name='グループA: 将来の目標',
-                        line_color='#8C9BA5',
-                        fillcolor='rgba(140, 155, 165, 0.1)'
+                        line_color='#2AD0A9',
+                        fillcolor='rgba(42, 208, 169, 0.1)'
                     ))
                     
                 if compare_mode and not df_b.empty:
@@ -732,18 +722,18 @@ if tab_dashboard:
                             theta=theta_labels + [theta_labels[0]],
                             fill='toself',
                             name='グループB: 現状の評価',
-                            line_color='#E58C00',
-                            fillcolor='rgba(229, 140, 0, 0.2)'
+                            line_color='#F2520A', # Functional Tertiary Color Dusk
+                            fillcolor='rgba(242, 82, 10, 0.2)'
                         ))
                 
                 fig.update_layout(
                     polar=dict(
                         radialaxis=dict(visible=True, range=[0, 5], gridcolor='#232323'),
-                        angularaxis=dict(gridcolor='#232323', tickfont=dict(color='#EAEAEA')),
-                        bgcolor='#111111'
+                        angularaxis=dict(gridcolor='#232323', tickfont=dict(color='#D5D5CB')),
+                        bgcolor='#0A0A0A'
                     ),
-                    paper_bgcolor='#0E0E0E',
-                    font=dict(color='#EAEAEA')
+                    paper_bgcolor='#000000',
+                    font=dict(color='#FFFFFF')
                 )
                 st.plotly_chart(fig, use_container_width=True)
         else:
@@ -816,8 +806,8 @@ if tab_admin:
                     )
                     if success:
                         st.success(f"🎉 カスタムアンケート `{sid}` が保存・発行されました！")
-                        prod_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/autodesk_assessment?survey_id={sid}"
-                        local_url = f"http://localhost:8501/autodesk_assessment?survey_id={sid}"
+                        prod_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?survey_id={sid}&brand=autodesk"
+                        local_url = f"http://localhost:8501/?survey_id={sid}&brand=autodesk"
                         
                         st.info("📋 **顧客配信用リンク (本番環境):**")
                         st.code(prod_url, language=None)
