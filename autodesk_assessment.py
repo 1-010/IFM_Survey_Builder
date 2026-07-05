@@ -503,17 +503,7 @@ with tab_input:
                         bg_color = "rgba(42, 208, 169, 0.04)"
                         badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.72rem; font-weight:700; padding:2px 6px; border-radius:2px; margin-right:8px;'>To-Be</span>"
                         
-                    levels_html += f"""
-                    <div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 10px 14px; border-top: 1px solid rgba(102,102,102,0.15); border-right: 1px solid rgba(102,102,102,0.15); border-bottom: 1px solid rgba(102,102,102,0.15); transition: all 0.2s ease;">
-                        <div style="display: flex; align-items: center; margin-bottom: 3px;">
-                            {badge_html}
-                            <b style="font-size: 0.85rem; color: #D5D5CB;">Level {lvl_num}</b>
-                        </div>
-                        <div style="font-size: 0.88rem; color: #FFFFFF; line-height: 1.45;">
-                            {row['levels'][lvl]}
-                        </div>
-                    </div>
-                    """
+                    levels_html += f'<div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 10px 14px; border-top: 1px solid rgba(102,102,102,0.15); border-right: 1px solid rgba(102,102,102,0.15); border-bottom: 1px solid rgba(102,102,102,0.15); transition: all 0.2s ease;"><div style="display: flex; align-items: center; margin-bottom: 3px;">{badge_html}<b style="font-size: 0.85rem; color: #D5D5CB;">Level {lvl_num}</b></div><div style="font-size: 0.88rem; color: #FFFFFF; line-height: 1.45;">{row["levels"][lvl]}</div></div>'
                 levels_html += "</div>"
                 st.markdown(levels_html, unsafe_allow_html=True)
                 
