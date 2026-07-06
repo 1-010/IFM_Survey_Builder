@@ -26,44 +26,86 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_JSON = SCRIPT_DIR / "data" / "ifm_questions.json"
 IMAGES_DIR = SCRIPT_DIR / "data" / "images"
 
+# Load default questions
+def load_all_questions_json():
+    if DATA_JSON.exists():
+        with open(DATA_JSON, "r", encoding="utf-8") as f:
+            return json.load(f)
+    return {}
+
+def get_default_questions():
+    survey_id = None
+    try:
+        survey_id = st.query_params.get("survey_id")
+    except AttributeError:
+        try:
+            survey_id = st.experimental_get_query_params().get("survey_id", [None])[0]
+        except:
+            pass
+            
+    if survey_id:
+        custom_survey = get_custom_survey(survey_id)
+        if custom_survey:
+            return pd.DataFrame(custom_survey["questions"]), survey_id, custom_survey.get("client_name")
+            
+    all_qs = load_all_questions_json()
+    return pd.DataFrame(all_qs.get("questions", [])), "default", None
+
+q_df, active_survey_id, client_name = get_default_questions()
+
 # Autodesk Brand Official Color & Layout Guidelines Integration
-# Primary: Black (#000000), White (#FFFFFF), Hello Yellow (#FFFF00)
-# Secondary: Warm Slate (#D5D5CB), Slate (#666666)
-# Tertiary (Functional): Dawn (#F09D4F), Dusk (#F2520A), Twilight (#1D91D0), Morning (#2AD0A9)
-# Radii Scale: Buttons/Tags = 4px, Inputs/Small Cards = 8px, Structural Containers/Images = 0px (Sharp)
 st.markdown(
     """
     <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
     
-    /* 1. Global Color Canvas (Autodesk Black & White) */
     html, body, [data-testid="stAppViewContainer"] {
-        background-color: #000000 !important; /* Pure Autodesk Black */
-        color: #FFFFFF !important; /* Pure Autodesk White */
+        background-color: #000000 !important;
+        color: #FFFFFF !important;
         font-family: 'Inter', sans-serif !important;
+        font-size: 15px;
+    }
+    
+    /* Responsive Text Sizes for Mobile */
+    @media (max-width: 768px) {
+        html, body, [data-testid="stAppViewContainer"] {
+            font-size: 16px !important;
+        }
+        h3 {
+            font-size: 1.35rem !important;
+        }
+        h4 {
+            font-size: 1.15rem !important;
+        }
+        .stSlider {
+            margin-bottom: 10px !important;
+        }
     }
     
     h1, h2, h3, h4, h5, h6, label, span, p {
         color: #FFFFFF !important;
     }
     
-    /* 2. Structural Elements - Sharp Corners (0px) for precision */
     div[data-testid="stVerticalBlockBorderWrapper"] > div {
-        border-radius: 0px !important; /* Sharp corners per layout guidelines */
+        border-radius: 0px !important;
         border: none !important;
-        border-left: 1px solid #666666 !important; /* Slate divider line */
+        border-left: 1px solid #666666 !important;
         background-color: transparent !important;
-        padding: 0px 24px !important;
+        padding: 0px 16px !important;
         box-shadow: none !important;
     }
     
-    /* Sharp corners for Images */
     .stImage img {
-        border-radius: 0px !important; /* Sharp corners for structural images */
-        border: 1px solid #666666 !important; /* Slate border */
+        border-radius: 0px !important;
+        border: 1px solid #666666 !important;
     }
     
-    /* 4. Inputs & Interactive controls - 8px radius */
+    /* Disable Streamlit Image Zoom Button */
+    button[data-testid="stImageZoomButton"] {
+        display: none !important;
+        visibility: hidden !important;
+    }
+    
     div[data-baseweb="input"], select, textarea {
         border-radius: 8px !important;
         border: 1px solid #666666 !important;
@@ -71,52 +113,45 @@ st.markdown(
         color: #FFFFFF !important;
     }
     
-    /* 5. Button Stylings - Contrast & Hierarchy Fixes */
-    /* Primary buttons (Yellow Background, Black Text) - strictly for final actions */
     div.stButton > button[data-testid="stBaseButton-primary"] {
-        background-color: #FFFF00 !important; /* Hello Yellow */
-        color: #000000 !important; /* Autodesk Black text */
+        background-color: #FFFF00 !important;
+        color: #000000 !important;
         border: none !important;
-        border-radius: 4px !important; /* 4px for buttons */
+        border-radius: 4px !important;
         font-weight: 700 !important;
-        font-size: 0.92rem !important;
+        font-size: 0.95rem !important;
         letter-spacing: 0.05em !important;
-        padding: 10px 24px !important;
+        padding: 12px 28px !important;
         transition: all 0.15s ease;
     }
     div.stButton > button[data-testid="stBaseButton-primary"]:hover {
-        background-color: #E5E500 !important; /* Hover effect */
+        background-color: #E5E500 !important;
     }
-    /* Force black text color for all child elements of primary button to fix Streamlit's white-text override */
     div.stButton > button[data-testid="stBaseButton-primary"] * {
         color: #000000 !important;
     }
     
-    /* Secondary buttons (Transparent/Black Background, White Text, Slate Border) - for navigation */
     div.stButton > button[data-testid="stBaseButton-secondary"] {
         background-color: #000000 !important;
         color: #FFFFFF !important;
-        border: 1px solid #666666 !important; /* Slate border */
+        border: 1px solid #666666 !important;
         border-radius: 4px !important;
         font-weight: 500 !important;
-        font-size: 0.92rem !important;
-        padding: 10px 24px !important;
+        font-size: 0.95rem !important;
+        padding: 12px 28px !important;
         transition: all 0.15s ease;
     }
     div.stButton > button[data-testid="stBaseButton-secondary"]:hover {
-        border-color: #FFFF00 !important; /* Hover outline highlight in Hello Yellow */
+        border-color: #FFFF00 !important;
         color: #FFFF00 !important;
     }
-    /* Force white text color for all child elements of secondary button */
     div.stButton > button[data-testid="stBaseButton-secondary"] * {
         color: #FFFFFF !important;
     }
-    /* Force Hello Yellow text color for child elements of secondary button on hover */
     div.stButton > button[data-testid="stBaseButton-secondary"]:hover * {
         color: #FFFF00 !important;
     }
     
-    /* Secondary/Navigation buttons when disabled */
     div.stButton > button[disabled] {
         background-color: #1A1A1A !important;
         color: #666666 !important;
@@ -126,35 +161,51 @@ st.markdown(
         color: #666666 !important;
     }
     
-    /* 6. Custom Slider & Toggle Accent - Hello Yellow (#FFFF00) */
-    div[role="slider"] {
-        background-color: #FFFF00 !important; /* Hello Yellow thumb */
+    /* Toggle Switch Styling - Standard Gray & Active green, no ugly yellow */
+    div[data-testid="stToggle"] > label > div:first-child {
+        background-color: #333333 !important;
     }
-    .stSlider > div {
-        color: #FFFF00 !important;
+    div[data-testid="stToggle"] > label > div:first-child[aria-checked="true"] {
+        background-color: #2AD0A9 !important;
     }
-    /* Toggle active track styling */
-    div[data-testid="stCheckbox"] > label > div:first-child {
+    
+    /* Slider Color Sync */
+    .asis-slider-container div[role="slider"] {
+        background-color: #1D91D0 !important;
+        border-color: #1D91D0 !important;
+    }
+    .asis-slider-container .stSlider > div > div > div > div {
+        background-color: #1D91D0 !important;
+    }
+    
+    .tobe-slider-container div[role="slider"] {
+        background-color: #2AD0A9 !important;
+        border-color: #2AD0A9 !important;
+    }
+    .tobe-slider-container .stSlider > div > div > div > div {
+        background-color: #2AD0A9 !important;
+    }
+    
+    /* Force text on yellow badge to be black */
+    span[style*="background-color:#FFFF00"], span[style*="background-color: rgb(255, 255, 0)"] {
+        color: #000000 !important;
+        font-weight: 700 !important;
+    }
+    
+    .stProgress > div > div > div {
         background-color: #FFFF00 !important;
     }
     
-    /* Clean Tab bars */
     button[data-baseweb="tab"] {
-        color: #D5D5CB !important; /* Warm Slate */
+        color: #D5D5CB !important;
         font-size: 0.95rem !important;
         border-bottom-width: 2px !important;
     }
     button[data-baseweb="tab"][aria-selected="true"] {
-        color: #FFFF00 !important; /* Hello Yellow active tab */
+        color: #FFFF00 !important;
         border-bottom-color: #FFFF00 !important;
     }
     
-    /* Clean Progress Bar */
-    .stProgress > div > div > div {
-        background-color: #FFFF00 !important; /* Hello Yellow progress */
-    }
-    
-    /* Hide Streamlit Default UI Noise */
     header {visibility: hidden; display: none !important;}
     footer {visibility: hidden; display: none !important;}
     #MainMenu {visibility: hidden; display: none !important;}
@@ -162,7 +213,6 @@ st.markdown(
     [class*="viewerBadge"] {display: none !important;}
     div[data-testid="stStatusWidget"] {visibility: hidden; display: none !important;}
     
-    /* Sticky Right Column Visuals */
     @media (min-width: 992px) {
         div[data-testid="stColumn"]:nth-child(2) {
             position: -webkit-sticky;
@@ -170,46 +220,6 @@ st.markdown(
             top: 20px;
             z-index: 999;
         }
-    }
-    
-    /* Custom Proposal Cards Styles */
-    .proposal-card {
-        background-color: #121212;
-        border: 1px solid #333333;
-        border-left: 4px solid #FFFF00 !important;
-        border-radius: 4px;
-        padding: 18px;
-        margin-top: 15px;
-        margin-bottom: 15px;
-    }
-    .proposal-title {
-        font-size: 1.1rem;
-        font-weight: 700;
-        color: #FFFF00;
-        margin-bottom: 6px;
-    }
-    .proposal-desc {
-        font-size: 0.88rem;
-        color: #FFFFFF;
-        line-height: 1.5;
-        margin-bottom: 12px;
-    }
-    .proposal-link-btn {
-        display: inline-block;
-        background-color: #000000;
-        color: #FFFF00 !important;
-        border: 1px solid #FFFF00;
-        border-radius: 4px;
-        padding: 6px 14px;
-        font-size: 0.82rem;
-        font-weight: 600;
-        text-decoration: none !important;
-        letter-spacing: 0.05em;
-        transition: all 0.15s ease;
-    }
-    .proposal-link-btn:hover {
-        background-color: #FFFF00;
-        color: #000000 !important;
     }
     </style>
     """,
@@ -229,7 +239,8 @@ def generate_pdf_report_bytes(res_name, res_email, res_team, res_exp, answers_li
     pdf = FPDF()
     pdf.add_page()
     
-    if os.path.exists(font_path):
+    has_noto = os.path.exists(font_path)
+    if has_noto:
         pdf.add_font("NotoSansJP", "", font_path)
         pdf.set_font("NotoSansJP", size=10)
     else:
@@ -240,37 +251,65 @@ def generate_pdf_report_bytes(res_name, res_email, res_team, res_exp, answers_li
     pdf.rect(0, 0, 210, 42, "F")
     
     pdf.set_text_color(255, 255, 255)
-    pdf.set_font("NotoSansJP", size=15)
-    pdf.text(15, 20, "AUTODESK SOLUTION ASSESSMENT REPORT")
-    pdf.set_font("NotoSansJP", size=10)
-    pdf.text(15, 30, f"{survey_title} - 診断結果レポート")
+    if has_noto:
+        pdf.set_font("NotoSansJP", size=15)
+        pdf.text(15, 20, "AUTODESK SOLUTION ASSESSMENT REPORT")
+        pdf.set_font("NotoSansJP", size=10)
+        pdf.text(15, 30, f"{survey_title} - 診断結果レポート")
+    else:
+        pdf.set_font("Helvetica", size=14)
+        pdf.text(15, 20, "AUTODESK SOLUTION ASSESSMENT REPORT")
+        pdf.set_font("Helvetica", size=10)
+        pdf.text(15, 30, "Assessment Result Report")
     
     # Client Info Block
     pdf.set_text_color(0, 0, 0)
     pdf.set_fill_color(245, 245, 242)
     pdf.rect(15, 50, 180, 30, "F")
-    pdf.set_font("NotoSansJP", size=9)
-    pdf.text(20, 57, f"回答者氏名: {res_name} 様")
-    pdf.text(20, 64, f"部署・チーム: {res_team if res_team else '未登録'}")
-    pdf.text(20, 71, f"連絡先メール: {res_email}  (経験年数: {res_exp})")
     
-    # Gap analysis Table
-    pdf.set_font("NotoSansJP", size=11)
-    pdf.text(15, 95, "アセスメント評価 Gap 分析")
-    
-    pdf.line(15, 99, 195, 99)
-    pdf.set_font("NotoSansJP", size=8.5)
-    pdf.text(17, 104, "設問ID")
-    pdf.text(32, 104, "評価カテゴリ / フェーズ")
-    pdf.text(125, 104, "As-Is (現状)")
-    pdf.text(150, 104, "To-Be (目標)")
-    pdf.text(175, 104, "Gap (乖離)")
-    pdf.line(15, 107, 195, 107)
+    if has_noto:
+        pdf.set_font("NotoSansJP", size=9)
+        pdf.text(20, 57, f"回答者氏名: {res_name} 様")
+        pdf.text(20, 64, f"部署・チーム: {res_team if res_team else '未登録'}")
+        pdf.text(20, 71, f"連絡先メール: {res_email}  (経験年数: {res_exp})")
+        
+        # Gap analysis Table
+        pdf.set_font("NotoSansJP", size=11)
+        pdf.text(15, 95, "アセスメント評価 Gap 分析")
+        
+        pdf.line(15, 99, 195, 99)
+        pdf.set_font("NotoSansJP", size=8.5)
+        pdf.text(17, 104, "設問ID")
+        pdf.text(32, 104, "評価カテゴリ / フェーズ")
+        pdf.text(125, 104, "As-Is (現状)")
+        pdf.text(150, 104, "To-Be (目標)")
+        pdf.text(175, 104, "Gap (乖離)")
+        pdf.line(15, 107, 195, 107)
+    else:
+        pdf.set_font("Helvetica", size=9)
+        pdf.text(20, 57, f"Respondent: {res_name}")
+        pdf.text(20, 64, f"Department/Team: {res_team if res_team else 'N/A'}")
+        pdf.text(20, 71, f"Email: {res_email}  (Experience: {res_exp})")
+        
+        pdf.set_font("Helvetica", size=11)
+        pdf.text(15, 95, "Assessment Gap Analysis")
+        
+        pdf.line(15, 99, 195, 99)
+        pdf.set_font("Helvetica", size=8.5)
+        pdf.text(17, 104, "QID")
+        pdf.text(32, 104, "Category / Phase")
+        pdf.text(125, 104, "As-Is")
+        pdf.text(150, 104, "To-Be")
+        pdf.text(175, 104, "Gap")
+        pdf.line(15, 107, 195, 107)
     
     y = 113
     for a in answers_list:
         pdf.text(17, y, str(a["question_id"]))
-        pdf.text(32, y, f"{a['phase']} ({a['department']})")
+        if has_noto:
+            pdf.text(32, y, f"{a['phase']} ({a['department']})")
+        else:
+            pdf.text(32, y, f"Phase {a['question_id']} ({a['department']})")
         pdf.text(133, y, str(a["as_is"]))
         pdf.text(158, y, str(a["to_be"]))
         
@@ -283,86 +322,20 @@ def generate_pdf_report_bytes(res_name, res_email, res_team, res_exp, answers_li
         
     pdf.line(15, y-2, 195, y-2)
     
-    # Proposal Section
+    # Summary of gaps
     pdf.ln(y - 95 + 10)
-    pdf.set_font("NotoSansJP", size=11)
-    pdf.cell(0, 10, "推奨 Autodesk ソリューションのご提案", ln=True)
-    pdf.ln(2)
-    
-    display_count = 0
-    for gap_item in gaps_sorted:
-        qid = gap_item["question_id"]
-        if qid in proposals_dict and gap_item["gap"] >= 1:
-            prop = proposals_dict[qid]
-            pdf.set_font("NotoSansJP", size=10)
-            pdf.set_text_color(255, 120, 0)
-            pdf.cell(0, 6, f"■ {prop['title']}", ln=True)
-            pdf.set_text_color(0, 0, 0)
-            pdf.set_font("NotoSansJP", size=8.5)
-            pdf.multi_cell(180, 5, prop["desc"])
-            pdf.set_text_color(29, 145, 208)
-            pdf.cell(0, 5, f"製品詳細リンク: {prop['url']}", ln=True)
-            pdf.ln(4)
-            display_count += 1
-            if display_count >= 2:
-                break
-                
-    if display_count == 0:
-        pdf.set_font("NotoSansJP", size=10)
-        pdf.set_text_color(255, 120, 0)
-        pdf.cell(0, 6, "■ Autodesk Tandem", ln=True)
-        pdf.set_text_color(0, 0, 0)
+    if has_noto:
+        pdf.set_font("NotoSansJP", size=11)
+        pdf.cell(0, 10, "推奨ソリューションのご案内", ln=True)
         pdf.set_font("NotoSansJP", size=8.5)
-        pdf.multi_cell(180, 5, "設備管理デジタルツインプラットフォームをご検討ください。BIMモデルやアセット情報、リアルタイムIoTデータを連携し、効率的な建物維持管理プロセスを実現します。")
-        pdf.set_text_color(29, 145, 208)
-        pdf.cell(0, 5, "製品詳細リンク: https://www.autodesk.com/products/tandem/overview", ln=True)
+        pdf.multi_cell(180, 5, "アセスメントは正常に送信完了いたしました。各設問の乖離値（Gap）の分析結果は上記テーブルの通りです。詳細な推奨ソリューションおよび個別提案書につきましては、担当営業より別途ご案内させていただきます。")
+    else:
+        pdf.set_font("Helvetica", size=11)
+        pdf.cell(0, 10, "Recommended Solutions Info", ln=True)
+        pdf.set_font("Helvetica", size=8.5)
+        pdf.multi_cell(180, 5, "Your assessment answers have been safely submitted. The gap analysis results are shown in the table above. Detailed proposal materials and custom recommendation scenarios will be delivered to you shortly by our sales team.")
         
     return pdf.output()
-
-# Load Questions
-def load_all_questions_json():
-    if not DATA_JSON.exists():
-        st.error(f"質問定義ファイルが見つかりません: {DATA_JSON}")
-        return {}
-    with open(DATA_JSON, "r", encoding="utf-8") as f:
-        data = json.load(f)
-    return data
-
-def get_active_questions():
-    # 安全にクエリパラメータを取得（新旧バージョン互換性ハック）
-    survey_id = None
-    try:
-        survey_id = st.query_params.get("survey_id")
-    except AttributeError:
-        try:
-            survey_id = st.experimental_get_query_params().get("survey_id", [None])[0]
-        except:
-            pass
-            
-    if survey_id:
-        custom_survey = get_custom_survey(survey_id)
-        if custom_survey:
-            return pd.DataFrame(custom_survey["questions"]), survey_id, custom_survey.get("client_name")
-        else:
-            st.warning(f"指定されたアンケートID `{survey_id}` が登録されていません。デフォルトの設問を表示します。")
-            
-    # クエリパラメータに 'model' があり、'factory_cloud' が指定されている場合は新モデルをデフォルトに
-    model_param = None
-    try:
-        model_param = st.query_params.get("model")
-    except AttributeError:
-        try:
-            model_param = st.experimental_get_query_params().get("model", [None])[0]
-        except:
-            pass
-            
-    all_qs = load_all_questions_json()
-    if model_param == "factory_cloud" and "factory_cloud_questions" in all_qs:
-        return pd.DataFrame(all_qs["factory_cloud_questions"]), "default", None
-        
-    return pd.DataFrame(all_qs.get("questions", [])), "default", None
-
-q_df, active_survey_id, client_name = get_active_questions()
 
 # Google Sheets Helper Functions
 def get_gspread_client():
@@ -456,7 +429,7 @@ def is_valid_email(email):
 if q_df.empty:
     st.stop()
 
-# Question ID to Autodesk Brand Image Mapping Table (Expanded to support FC01-FC08)
+# Image Mapping for IFM
 IMAGE_MAPPING = {
     "FI01": "fy27-aec-forma-industry-cloud-imagery.webp",
     "FI02": "brand-image-prototype-1-dark.webp",
@@ -483,38 +456,22 @@ def render_hero_image(qid):
         if img_path.exists():
             st.image(str(img_path), use_container_width=True)
             return
-    # Default fallback container
     st.markdown(
         """
-        <div style="
-            border: 1px solid #666666; 
-            background-color: #121212;
-            height: 220px; 
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            border-radius: 0px;
-            color: #D5D5CB;
-            font-size: 0.9rem;
-            font-family: monospace;
-            margin-bottom: 20px;
-        ">
+        <div style="border: 1px solid #666666; background-color: #121212; height: 180px; display: flex; align-items: center; justify-content: center; border-radius: 0px; color: #D5D5CB; font-size: 0.9rem; font-family: monospace; margin-bottom: 20px;">
         [ AUTODESK // PRECISION_DESIGN_SYSTEM ]
         </div>
         """,
         unsafe_allow_html=True
     )
 
-# Brand Header Layout (Dynamic 2-Stacked Logo on Left, Title on Right for Visual Hierarchy)
-# Flattened to single-line HTML to bypass Streamlit's markdown parser codeblock fallback bug
+# Brand Header Layout
 stacked_logo_svg = '<svg width="220" height="85" viewBox="0 0 220 85" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(2.4) translate(30, 1)"><path d="M0.538536 22.7316L19.9163 10.678H29.9686C30.2781 10.678 30.5561 10.9259 30.5561 11.2662C30.5561 11.5442 30.4321 11.6681 30.2781 11.7605L20.7598 17.4657C20.1416 17.8368 19.9252 18.579 19.9252 19.1356L19.9155 22.7316H32.0097V1.83296C32.0097 1.4303 31.7002 1.09078 31.2367 1.09078H19.6999L0.369995 13.091V22.7316L0.538536 22.7316Z" fill="white"/></g><text x="110" y="74" fill="white" font-family="\'Inter\', sans-serif" font-size="18" font-weight="900" letter-spacing="4.5" text-anchor="middle">AUTODESK</text></svg>'
-
-header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #666666; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Maturity Evaluation Platform</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">IFM Maturity Assessment</div></div></div>'
-
+header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #666666; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Maturity Evaluation Platform</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">設備管理成熟度アセスメント</div></div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
-# Hide Navigation Tabs for Clients
+# Client navigation view switcher
 is_client_access = False
 try:
     is_client_access = "survey_id" in st.query_params
@@ -535,32 +492,24 @@ else:
     tab_dashboard = tabs[1]
     tab_admin = tabs[2]
 
-### 📝 Tab 1: 回ザー回答入力フォーム ###
+### 📝 Tab 1: 回答入力フォーム ###
 with tab_input:
     col_left_form, col_right_chart = st.columns([11, 9])
     
-    # セッション状態管理:
-    # current_step == 0: 個人情報入力 ＆ プライバシーポリシー同意画面 (Step 0)
-    # current_step >= 1: 設問 1 〜 10 の回答画面
     if "current_step" not in st.session_state:
         st.session_state.current_step = 0
-        
     num_questions = len(q_df)
     
-    # 送信完了フラグ
     if "is_submitted" not in st.session_state:
         st.session_state.is_submitted = False
         
     with col_left_form:
         if st.session_state.is_submitted:
-            # --- 送信完了＆おすすめ製品動的提案画面 ---
             st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF;'>アセスメント回答送信完了</h3>", unsafe_allow_html=True)
             st.success("アセスメントの回答が安全に記録されました。ご協力ありがとうございました。")
             st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
-            st.markdown("<h4 style='color:#FFFF00; font-weight:700; margin-bottom:10px;'>お客様の回答に基づく最適なソリューション提案</h4>", unsafe_allow_html=True)
-            st.markdown("<p style='color:#D5D5CB; font-size:0.92rem; margin-bottom:20px;'>回答から抽出された「現在の課題（As-Is）」と「目指したいゴール（To-Be）」の乖離値（Gap）を自動分析し、最適な解決策をご提案いたします。</p>", unsafe_allow_html=True)
             
-            # 各設問のGap分析
+            # Gap分析
             gaps = []
             answers_list_for_pdf = []
             for _, r in q_df.iterrows():
@@ -580,123 +529,37 @@ with tab_input:
                 if not is_skipped:
                     gaps.append({
                         "question_id": qid,
-                        "phase": r['phase'],
                         "gap": to_be - as_is,
                         "to_be": to_be
                     })
             
-            # Gapが大きい順（且つTo-Beが高い順）にソート
             gaps_sorted = sorted(gaps, key=lambda x: (x["gap"], x["to_be"]), reverse=True)
             
-            # 製品提案マッピングテーブル
-            # 新モデル（FC01-FC08）および既存IFMモデル双方に対応
-            PRODUCT_PROPOSALS = {
-                "FC01": {
-                    "title": "AEC環境シミュレーションクラウド - Autodesk Forma",
-                    "desc": "初期計画段階での敷地分析、日影・騒音・風向シミュレーションの生産性向上に大きな乖離が見られます。Autodesk Formaを導入することで、敷地規制や環境影響をクラウド上のAIで即時解析し、手戻りの少ない初期配置計画を迅速に策定できます。",
-                    "url": "https://www.autodesk.com/products/forma/overview"
-                },
-                "FC02": {
-                    "title": "離散イベント生産シミュレーション - FlexSim",
-                    "desc": "製造工程や搬送・AGVルートのボトルネック検証に大きな改善余地があります。FlexSimを用いることで、工場レイアウト設計に『時間の概念』をプラスした高度なシミュレーションを実行し、無駄な設備投資の発生を防ぎます。",
-                    "url": "https://www.autodesk.com/products/flexsim/overview"
-                },
-                "FC03": {
-                    "title": "2D/3D双方向レイアウト設計同期 - Factory Design Utilities",
-                    "desc": "AutoCADによる平面計画と、Inventorによる3D設備アセンブリの連携に課題感が見られます。Factory Design Utilitiesを使用することで、2Dと3Dがリアルタイムに相互同期し、干渉チェックと整合性維持を全自動で行えます。",
-                    "url": "https://www.autodesk.com/solutions/factory-design"
-                },
-                "FC04": {
-                    "title": "AI搭載次世代設計モデリング - Navpack / Navasto",
-                    "desc": "AIを用いた自律型モデリングおよび設計支援に強い関心があるようです。過去の3D設計データを学習したAIエンジンと連携することで、形状要件を満たすバリエーションを自動生成し、設計効率を劇的に高めます。",
-                    "url": "https://www.autodesk.com/solutions/generative-design"
-                },
-                "FC05": {
-                    "title": "作図およびデータ連携の自動化 - AutoCAD API & 業種別ツールセット",
-                    "desc": "CAD内での定型処理の自動化やBOM連携にGapがあります。AutoCADの専用ツールセットやLISP/APIの本格導入により、図面から部品表の作成、データ統合などの手作業を完全に自動化できます。",
-                    "url": "https://www.autodesk.com/products/autocad/overview"
-                },
-                "FC06": {
-                    "title": "クラウド統合データ環境 - Autodesk Construction Cloud (ACC)",
-                    "desc": "社内外のサプライヤーとの協調設計および履歴管理に乖離が見られます。ACCを導入することで、常に最新の3DモデルをWeb上でセキュアに共有し、バージョン管理や承認ワークフローを効率化します。",
-                    "url": "https://www.autodesk.com/products/autodesk-construction-cloud/overview"
-                },
-                "FC07": {
-                    "title": "直感的なバーチャル合意形成 - FlexSim VR/AR",
-                    "desc": "意思決定プロセスにおける合意形成スピードの向上に大きなGapがあります。FlexSimのシミュレーションとVR（仮想現実）を連動させ、実物大の工場内を体験しながら検証することで、社内会議の意思決定を劇的に迅速化します。",
-                    "url": "https://www.autodesk.com/products/flexsim/overview"
-                },
-                "FC08": {
-                    "title": "パラメータ駆動型設計自動化 - Inventor iLogic",
-                    "desc": "設計の再利用とバリエーション展開に課題があります。iLogicのルールエンジンを構築することで、注文仕様に応じたアセンブリの自動構成から、製造用図面の自動出力を一気通貫で自動化できます。",
-                    "url": "https://www.autodesk.com/products/inventor/overview"
-                },
-                # 既存のIFMモデル（PE01-PE05, FI01-FI05）からのマッピングフォールバック
-                "PE05": {
-                    "title": "建物・設備デジタルツイン - Autodesk Tandem",
-                    "desc": "運用および保全段階におけるデータの一元管理において乖離が見られます。Autodesk Tandemを導入して建物のデジタルツインを構築し、BIMデータとリアルタイムアセットデータを連携させることで、予知保全をスマートに推進します。",
-                    "url": "https://www.autodesk.com/products/tandem/overview"
-                },
-                "PE03": {
-                    "title": "3D統合コーディネーション - Autodesk Navisworks",
-                    "desc": "設計内容の統合検証・干渉チェックの自動化にGapがあります。Navisworksにより、複数の異なるフォーマットの3Dモデルを単一の環境に統合し、自動干渉検出と変更追跡を行うことで、施工手戻りを防ぎます。",
-                    "url": "https://www.autodesk.com/products/navisworks/overview"
-                }
-            }
-            
-            # Gapが大きい上位2製品を抽出して表示
-            display_count = 0
-            for gap_item in gaps_sorted:
-                qid = gap_item["question_id"]
-                if qid in PRODUCT_PROPOSALS and gap_item["gap"] >= 1: # Gapが1以上あるもののみ推奨
-                    prop = PRODUCT_PROPOSALS[qid]
-                    st.markdown(
-                        f"""
-                        <div class="proposal-card">
-                            <div class="proposal-title">{prop['title']}</div>
-                            <div class="proposal-desc">{prop['desc']}</div>
-                            <a href="{prop['url']}" target="_blank" class="proposal-link-btn">製品の詳細情報を確認する</a>
-                        </div>
-                        """,
-                        unsafe_allow_html=True
+            # PDF診断書ダウンロードボタンの実装（堅牢な例外保護付き）
+            pdf_data = None
+            try:
+                with st.spinner("PDFレポートを準備中..."):
+                    pdf_data = generate_pdf_report_bytes(
+                        res_name=st.session_state.get("res_name", "テスト回答者"),
+                        res_email=st.session_state.get("res_email", "info@autodesk.com"),
+                        res_team=st.session_state.get("res_team", "未設定"),
+                        res_exp=st.session_state.get("res_exp", "未設定"),
+                        answers_list=answers_list_for_pdf,
+                        gaps_sorted=gaps_sorted,
+                        proposals_dict={},
+                        survey_title="設備管理成熟度アセスメント"
                     )
-                    display_count += 1
-                    if display_count >= 2: # 最大2つ表示
-                        break
-                        
-            if display_count == 0:
-                # 目立ったGapがない場合のデフォルトプレミアム推奨
-                st.markdown(
-                    """
-                    <div class="proposal-card">
-                        <div class="proposal-title">Autodesk Product Design & Manufacturing Collection (PDMC)</div>
-                        <div class="proposal-desc">お客様の全体的な成熟度はすでに非常に高い水準にあります。AutoCAD、Inventor、Factory Design Utilitiesを網羅したPDMCコレクションパッケージをご活用いただくことで、デジタルファクトリー全体のプロセスをさらに統合・洗練できます。</div>
-                        <a href="https://www.autodesk.com/collections/product-design-manufacturing/overview" target="_blank" class="proposal-link-btn">PDMC コレクションの詳細を確認する</a>
-                    </div>
-                    """,
-                    unsafe_allow_html=True
-                )
+            except Exception as e:
+                st.warning(f"PDF生成中にエラーが発生しました（安全のため標準レイアウトへフォールバックします）: {e}")
             
-            # PDF診断書ダウンロードボタンの実装
-            with st.spinner("PDFレポートを準備中..."):
-                pdf_data = generate_pdf_report_bytes(
-                    res_name=st.session_state.get("res_name", "テスト回答者"),
-                    res_email=st.session_state.get("res_email", "info@autodesk.com"),
-                    res_team=st.session_state.get("res_team", "未設定"),
-                    res_exp=st.session_state.get("res_exp", "未設定"),
-                    answers_list=answers_list_for_pdf,
-                    gaps_sorted=gaps_sorted,
-                    proposals_dict=PRODUCT_PROPOSALS,
-                    survey_title="アセスメント"
+            if pdf_data:
+                st.download_button(
+                    label="診断結果レポート (PDF) をダウンロード",
+                    data=pdf_data,
+                    file_name=f"Autodesk_IFM_Report_{active_survey_id}.pdf",
+                    mime="application/pdf",
+                    use_container_width=True
                 )
-            
-            st.download_button(
-                label="診断結果レポート (PDF) をダウンロード",
-                data=pdf_data,
-                file_name=f"Autodesk_Assessment_Report_{active_survey_id}.pdf",
-                mime="application/pdf",
-                use_container_width=True
-            )
             
             st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
             if st.button("アセスメントを再回答する", type="secondary", use_container_width=True):
@@ -705,11 +568,7 @@ with tab_input:
                 st.rerun()
 
         elif st.session_state.current_step == 0:
-            # --- STEP 0: プロファイル ＆ プライバシーポリシー同意画面 ---
             st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF;'>回答者プロファイル ＆ 同意確認</h3>", unsafe_allow_html=True)
-            st.markdown("<p style='color:#D5D5CB; font-size:0.95rem; margin-bottom:20px;'>アセスメントを開始する前に、以下のプロファイル情報の入力と、個人情報の取り扱いへのご同意をお願いいたします。</p>", unsafe_allow_html=True)
-            
-            # 入力フィールド群
             respondent_name = st.text_input("回答者名 *", placeholder="氏名をご記入ください（例: 山田 太郎）", value=st.session_state.get("res_name", ""))
             st.session_state["res_name"] = respondent_name
             
@@ -725,28 +584,22 @@ with tab_input:
             )
             st.session_state["res_exp"] = experience_years
             
-            specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: 生産技術部 設計課", value=st.session_state.get("res_team", ""))
+            specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: FM推進部 管理課", value=st.session_state.get("res_team", ""))
             st.session_state["res_team"] = specific_team
             
             st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
-            
-            # 個人情報同意チェックボックス（先にチェック欄を配置）
             agree_privacy = st.checkbox("個人情報の取り扱い説明事項を確認し、同意します。 *", value=st.session_state.get("agree_privacy", False), key="agree_privacy_step0")
             st.session_state["agree_privacy"] = agree_privacy
             
-            # 同意チェックが入っていない（False）ときのみ、法務確認済みのポリシー文面（プレースホルダー）を表示
             if not agree_privacy:
                 st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-                st.markdown("<b style='font-size:0.85rem; color:#666666;'>【確認用：個人情報保護に関する同意文面（法務確認中プレースホルダー）】</b>", unsafe_allow_html=True)
+                st.markdown("<b style='font-size:0.85rem; color:#8C9BA5;'>【確認用：個人情報保護に関する同意文面（法務確認中プレースホルダー）】</b>", unsafe_allow_html=True)
                 privacy_policy_text = "[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。チェックボックスに同意を入れると、この文面エリアは自動的に非表示になり、アセスメント開始ボタンに素早くアクセスできるようになります。]"
                 st.markdown(
-                    f'<div style="background-color:#121212; border:1px solid #333333; border-radius:8px; padding:15px; font-size:0.88rem; color:#8C9BA5; line-height:1.5; white-space:pre-wrap; transition: all 0.2s ease;">'
-                    f'{privacy_policy_text}'
-                    f'</div>',
+                    f'<div style="background-color:#121212; border:1px solid #333333; border-radius:8px; padding:15px; font-size:0.88rem; color:#8C9BA5; line-height:1.5; white-space:pre-wrap; transition: all 0.2s ease;">{privacy_policy_text}</div>',
                     unsafe_allow_html=True
                 )
             
-            # バリデーションチェック
             inputs_valid = (
                 respondent_name.strip() != "" and 
                 email_input.strip() != "" and 
@@ -756,74 +609,54 @@ with tab_input:
             )
             
             st.markdown("<div style='margin-top:20px;'></div>", unsafe_allow_html=True)
-            
-            # アセスメント開始ボタン
             if st.button("自己アセスメントを開始する", type="primary", disabled=not inputs_valid, use_container_width=True):
                 st.session_state.current_step = 1
                 st.rerun()
                 
         else:
-            # --- STEP 1 〜 10: 設問回答画面 (プロファイルは画面外に隠蔽) ---
-            current_idx = st.session_state.current_step - 1
-            row = q_df.iloc[current_idx]
-            qid = row['question_id']
-            
-            # ステップ送りナビゲーション
-            st.markdown(
-                f"<div style='font-size:0.85rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
-                f"{row['department']} 領域  ·  STEP {st.session_state.current_step} / {num_questions}</div>",
-                unsafe_allow_html=True
-            )
-            st.markdown(f"<h3 style='margin-top:2px; font-size:1.6rem; font-weight:700;'>{row['question_id']} ({row['phase']})</h3>", unsafe_allow_html=True)
-            
-            # 設問カード (無骨な囲み枠の余白を極限まで圧縮し、フォントサイズを最適化して一画面に収める)
-            st.markdown(
-                f"<div style='background-color:#121212; padding:12px 16px; border-left:3px solid #FFFF00; margin-bottom:12px; font-size:0.95rem; line-height:1.5; color:#FFFFFF;'>"
-                f"{row['question_text']} 各レベルの定義を参考に、現状と目標を選択してください。</div>", 
-                unsafe_allow_html=True
-            )
-            
-            # 該当しない場合のスキップ
-            skip_key = f"skip_{qid}"
-            if skip_key not in st.session_state:
-                st.session_state[skip_key] = False
-            skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
-            
-            # プレースホルダー（コンテナ）を作成し、画面順序とパース順序を逆転させてRDP表示を上に持ってくる
-            levels_container = st.container()
-            profile_container = st.container()
-            
-            # 回答用のバー二つは画面の一番下側（送信ボタンのすぐ上）に配置
-            slider_container = st.container()
-            
-            with slider_container:
-                st.markdown("<hr style='border-color:#333333; margin:8px 0;'>", unsafe_allow_html=True)
-                col_s1, col_s2 = st.columns(2)
-                with col_s1:
-                    as_is_val = st.slider(
-                        "現状の成熟度評価 (As-Is)", 
-                        1, 5, 
-                        key=f"asis_{qid}", 
-                        disabled=skip
-                    )
-                with col_s2:
-                    to_be_val = st.slider(
-                        "将来の目標成熟度 (To-Be)", 
-                        1, 5, 
-                        key=f"tobe_{qid}", 
-                        disabled=skip
-                    )
-            
-            # 1画面に収めるため、余白とフォントサイズをギュッと凝縮したレベルカードを描画
-            with levels_container:
+            # 1から current_step までの設問を下方向に追加しながら描画する
+            for step_idx in range(1, st.session_state.current_step + 1):
+                q_idx = step_idx - 1
+                row = q_df.iloc[q_idx]
+                qid = row['question_id']
+                
+                st.markdown(
+                    f"<div style='background-color:#121212; padding:15px; border-left:4px solid #FFFF00; margin-top:20px; border-top:1px solid #333333; border-right:1px solid #333333; border-bottom:1px solid #333333;'>"
+                    f"<div style='font-size:0.8rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
+                    f"{row['department']} 領域  ·  設問 {step_idx} / {num_questions}</div>"
+                    f"<h4 style='margin-top:4px; margin-bottom:6px; font-size:1.2rem; font-weight:700; color:#FFFFFF;'>{row['question_id']} ({row['phase']})</h4>"
+                    f"<div style='font-size:0.92rem; line-height:1.45; color:#FFFFFF;'>{row['question_text']}</div>"
+                    f"</div>",
+                    unsafe_allow_html=True
+                )
+                
+                # スキップトグル (イエローを使用せず視認性の高いグリーンアクティブスタイル)
+                skip_key = f"skip_{qid}"
+                if skip_key not in st.session_state:
+                    st.session_state[skip_key] = False
+                skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
+                
+                # スライダー値の取得
+                asis_key = f"asis_{qid}"
+                tobe_key = f"tobe_{qid}"
+                
+                if asis_key not in st.session_state:
+                    st.session_state[asis_key] = 2
+                if tobe_key not in st.session_state:
+                    st.session_state[tobe_key] = 4
+                
                 if not skip:
-                    levels_html = "<div style='display: flex; flex-direction: column; gap: 5px; margin-top: 5px;'>"
+                    # レベルカードの表示
+                    as_is_val = st.session_state[asis_key]
+                    to_be_val = st.session_state[tobe_key]
+                    
+                    levels_html = "<div style='display: flex; flex-direction: column; gap: 4px; margin-top: 8px; margin-bottom: 12px;'>"
                     for lvl in ["L1", "L2", "L3", "L4", "L5"]:
                         lvl_num = int(lvl[1])
                         is_asis = (as_is_val == lvl_num)
                         is_tobe = (to_be_val == lvl_num)
                         
-                        border_color = "rgba(102, 102, 102, 0.2)" 
+                        border_color = "rgba(102, 102, 102, 0.15)" 
                         bg_color = "transparent"
                         badge_html = ""
                         
@@ -840,79 +673,55 @@ with tab_input:
                             bg_color = "rgba(42, 208, 169, 0.03)"
                             badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>To-Be</span>"
                             
-                        levels_html += f'<div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 6px 12px; border-top: 1px solid rgba(102,102,102,0.1); border-right: 1px solid rgba(102,102,102,0.1); border-bottom: 1px solid rgba(102,102,102,0.1); transition: all 0.15s ease;"><div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<b style="font-size: 0.8rem; color: #D5D5CB;">Level {lvl_num}</b></div><div style="font-size: 0.82rem; color: #FFFFFF; line-height: 1.35;">{row["levels"][lvl]}</div></div>'
+                        levels_html += f'<div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 5px 10px; border-top: 1px solid rgba(102,102,102,0.1); border-right: 1px solid rgba(102,102,102,0.1); border-bottom: 1px solid rgba(102,102,102,0.1);"><div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<b style="font-size: 0.78rem; color: #D5D5CB;">Level {lvl_num}</b></div><div style="font-size: 0.8rem; color: #FFFFFF; line-height: 1.35;">{row["levels"][lvl]}</div></div>'
                     levels_html += "</div>"
                     st.markdown(levels_html, unsafe_allow_html=True)
-            
-            with profile_container:
-                st.markdown("<div style='margin-top:8px;'></div>", unsafe_allow_html=True)
-                with st.expander("登録プロファイル・個人情報同意事項の確認と変更"):
-                    st.markdown("<p style='font-size:0.85rem; color:#D5D5CB; margin-bottom:10px;'>登録情報を変更すると、すべての設問の送信データにリアルタイムに反映されます。</p>", unsafe_allow_html=True)
                     
-                    edit_name = st.text_input("回答者名 *", value=st.session_state.get("res_name", ""), key="edit_name")
-                    st.session_state["res_name"] = edit_name
-                    
-                    edit_email = st.text_input("メールアドレス *", value=st.session_state.get("res_email", ""), key="edit_email")
-                    st.session_state["res_email"] = edit_email
-                    
-                    edit_exp = st.selectbox(
-                        "勤続年数 *",
-                        ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"],
-                        index=["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"].index(st.session_state.get("res_exp")) if st.session_state.get("res_exp") in ["0～2年", "2～5年", "5～10年", "10～15年", "15年以上"] else 0,
-                        key="edit_exp"
-                    )
-                    st.session_state["res_exp"] = edit_exp
-                    
-                    edit_team = st.text_input("部署名・チーム名 (任意)", value=st.session_state.get("res_team", ""), key="edit_team")
-                    st.session_state["res_team"] = edit_team
-                    
-                    st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-                    st.markdown("<b style='font-size:0.88rem; color:#FFFFFF;'>【同意ステータス】</b>", unsafe_allow_html=True)
-                    edit_agree = st.checkbox("個人情報の取り扱い説明事項に同意します *", value=st.session_state.get("agree_privacy", False), key="edit_agree")
-                    st.session_state["agree_privacy"] = edit_agree
-                    
-                    if not edit_agree:
-                        st.markdown("<div style='margin-top:5px;'></div>", unsafe_allow_html=True)
-                        st.info("[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。]")
+                    # カラー同期されたスライダーの描画
+                    col_s1, col_s2 = st.columns(2)
+                    with col_s1:
+                        st.markdown("<div class='asis-slider-container'>", unsafe_allow_html=True)
+                        st.slider("現状の成熟度評価 (As-Is)", 1, 5, key=asis_key, disabled=(step_idx < st.session_state.current_step))
+                        st.markdown("</div>", unsafe_allow_html=True)
+                    with col_s2:
+                        st.markdown("<div class='tobe-slider-container'>", unsafe_allow_html=True)
+                        st.slider("将来の目標成熟度 (To-Be)", 1, 5, key=tobe_key, disabled=(step_idx < st.session_state.current_step))
+                        st.markdown("</div>", unsafe_allow_html=True)
+                else:
+                    st.markdown("<div style='padding:10px 0; color:#8C9BA5; font-size:0.9rem;'>※ この設問はスキップされています</div>", unsafe_allow_html=True)
                 
-            st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-            
-            # ナビゲーションボタン群 (絵文字を徹底排除、type="secondary" による対比)
-            col_btn1, col_btn2, col_btn3 = st.columns([1, 1, 2])
-            with col_btn1:
-                if st.button("前の画面", type="secondary", use_container_width=True):
-                    st.session_state.current_step -= 1
-                    st.rerun()
-                    
-            with col_btn2:
-                next_disabled = st.session_state.current_step == num_questions
-                if st.button("次の設問", type="secondary", disabled=next_disabled, use_container_width=True):
-                    st.session_state.current_step += 1
-                    st.rerun()
-                    
-            with col_btn3:
-                is_last_step = st.session_state.current_step == num_questions
-                profile_valid = (
-                    st.session_state.get("res_name", "").strip() != "" and
-                    st.session_state.get("res_email", "").strip() != "" and
-                    is_valid_email(st.session_state.get("res_email", "")) and
-                    st.session_state.get("res_exp") is not None and
-                    st.session_state.get("agree_privacy", False)
-                )
-                submit_disabled = not (is_last_step and profile_valid)
-                submit_clicked = st.button("アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True)
-                
-                if is_last_step and not st.session_state.get("agree_privacy", False):
-                    st.warning("送信するには個人情報の取り扱いへの同意が必要です（『登録プロファイル・個人情報同意事項の確認と変更』から同意をオンにできます）。")
+                # 「現在フォーカスしている最新の設問」のみ操作ボタンを表示する
+                if step_idx == st.session_state.current_step:
+                    st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+                    if step_idx < num_questions:
+                        if st.button("回答を確定して次の設問へ", type="primary", use_container_width=True, key=f"next_btn_{qid}"):
+                            st.session_state.current_step += 1
+                            st.rerun()
+                    else:
+                        # 最終設問の最後の送信ボタン
+                        profile_valid = (
+                            st.session_state.get("res_name", "").strip() != "" and
+                            st.session_state.get("res_email", "").strip() != "" and
+                            is_valid_email(st.session_state.get("res_email", "")) and
+                            st.session_state.get("res_exp") is not None and
+                            st.session_state.get("agree_privacy", False)
+                        )
+                        
+                        submit_disabled = not profile_valid
+                        submit_clicked = st.button("アセスメント結果を最終送信する", type="primary", disabled=submit_disabled, use_container_width=True, key="final_submit_btn")
+                        
+                        if not st.session_state.get("agree_privacy", False):
+                            st.warning("送信するには個人情報の取り扱いへの同意が必要です。")
 
     with col_right_chart:
-        # 送信完了後はチャート側の表示を固定
+        # 現在アクティブな設問IDのイメージを表示
         if st.session_state.is_submitted:
-            render_hero_image("PE01")
+            render_hero_image("FI01")
         elif st.session_state.current_step == 0:
-            render_hero_image("PE01") 
+            render_hero_image("FI01") 
         else:
-            render_hero_image(qid)
+            current_active_qid = q_df.iloc[st.session_state.current_step - 1]['question_id']
+            render_hero_image(current_active_qid)
             
         st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
         
@@ -986,27 +795,18 @@ with tab_input:
             st.plotly_chart(fig, use_container_width=True)
             
             answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
-            
             st.progress(answered_count / num_questions)
             st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
-    # 送信処理のバリデーションと実行
-    if not st.session_state.is_submitted and st.session_state.current_step == num_questions and submit_clicked:
+    # 最終送信処理の実行（デバッグ用トレース出力付き）
+    if not st.session_state.is_submitted and st.session_state.current_step == num_questions and 'submit_clicked' in locals() and submit_clicked:
         res_name = st.session_state.get("res_name", "").strip()
         res_email = st.session_state.get("res_email", "").strip()
         res_exp = st.session_state.get("res_exp")
         res_team = st.session_state.get("res_team", "").strip()
         agree_privacy = st.session_state.get("agree_privacy", False)
         
-        if not res_name:
-            st.error("回答者名を入力してください。")
-        elif not res_email or not is_valid_email(res_email):
-            st.error("有効なメールアドレスを入力してください。")
-        elif not res_exp:
-            st.error("勤続年数を選択してください。")
-        elif not agree_privacy:
-            st.error("個人情報の取り扱いへの同意が必要です。")
-        else:
+        if res_name and res_email and is_valid_email(res_email) and res_exp and agree_privacy:
             timestamp = datetime.now().isoformat()
             records = []
             answers_list = []
@@ -1049,18 +849,25 @@ with tab_input:
             }
                 
             with st.spinner("結果を送信中..."):
-                fs_success = save_response_to_firestore(firestore_doc)
+                fs_success = False
+                try:
+                    fs_success = save_response_to_firestore(firestore_doc)
+                except Exception as e:
+                    st.error(f"Firestore送信エラー: {e}")
+                    
                 sheets_success = False
                 if fs_success:
-                    sheets_success = save_response_to_sheets(records)
+                    try:
+                        sheets_success = save_response_to_sheets(records)
+                    except Exception as e:
+                        st.error(f"Google Sheets送信エラー: {e}")
                 
                 if fs_success:
                     st.balloons()
                     st.session_state.is_submitted = True
                     st.rerun()
                 else:
-                    st.error("送信に失敗しました。管理者にお問い合わせください。")
-
+                    st.error("データの格納に失敗しました。認証鍵またはデータベースの接続制限を確認してください。")
 
 ### 📊 Tab 2: 結果分析ダッシュボード ###
 if tab_dashboard:
@@ -1196,7 +1003,7 @@ if tab_dashboard:
                 )
                 st.plotly_chart(fig, use_container_width=True)
                 
-                # 組織内認識ギャップ分析セクションの追加
+                # 組織内認識ギャップ分析セクション
                 st.markdown("<hr style='border-color:#333333; margin:25px 0;'>", unsafe_allow_html=True)
                 st.subheader("組織内・認識の歪み（ギャップ）分析")
                 
@@ -1205,9 +1012,7 @@ if tab_dashboard:
                 else:
                     st.markdown("<p style='font-size:0.92rem; color:#D5D5CB; margin-bottom:15px;'>同じアンケートIDに対する複数名の回答から、現場層（勤続年数5年未満）と意思決定層（勤続年数10年以上）の間の【認識ギャップ】を抽出します。</p>", unsafe_allow_html=True)
                     
-                    # 現場層データ (勤続5年未満)
                     genba_df = df_a[df_a['experience_years'].isin(["0～2年", "2～5年"])]
-                    # マネジメント層データ (勤続10年以上)
                     mgmt_df = df_a[df_a['experience_years'].isin(["10～15年", "15年以上"])]
                     
                     agg_genba = genba_df.groupby(['question_id', 'phase'])['as_is'].mean().reset_index().sort_values('question_id')
@@ -1266,7 +1071,6 @@ if tab_dashboard:
                     with col_g2:
                         st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-bottom:10px;'>🚨 組織内認識不一致度アラート</h5>", unsafe_allow_html=True)
                         
-                        # ギャップ算出
                         gap_details = []
                         for q in df_a['question_id'].unique():
                             val_genba = genba_df[genba_df['question_id'] == q]['as_is'].mean()
@@ -1292,15 +1096,14 @@ if tab_dashboard:
                                     )
                                     display_err_count += 1
                             if display_err_count == 0:
-                                st.write("現場層と意思決定層の認識はほぼ完全に一致しており、足並みが綺麗に揃っています。")
+                                st.write("現場層と意思決定層의 認識ギャップはありません。")
                         else:
-                            st.write("各回答者層におけるデータが不足しています。")
+                            st.write("データが不足しています。")
         else:
             if dash_pw != "":
                 st.error("パスワードが正しくありません。")
 
-
-### 🔧 Tab 3: 営業管理（カスタム発行） ###
+### 🔧 Tab 3: 営業管理 ###
 if tab_admin:
     with tab_admin:
         st.header("営業担当用 カスタムアンケート発行管理")
@@ -1317,7 +1120,6 @@ if tab_admin:
             with col_ad2:
                 new_creator = st.text_input("作成者名 *", placeholder="例: 佐藤 営業担当")
                 
-            # モデルテンプレートのセレクトボックスを追加 (絵文字を徹底排除)
             model_template = st.selectbox(
                 "設問モデルテンプレート", 
                 [
@@ -1343,7 +1145,6 @@ if tab_admin:
             st.subheader("2. 設問テキストのカスタマイズ")
             all_qs = load_all_questions_json()
             
-            # 選択されたモデルタイプに基づいてベース設問とappパラメータを決定
             app_suffix = ""
             if "工場設計" in model_template:
                 default_qs = all_qs.get("factory_cloud_questions", [])
@@ -1413,19 +1214,14 @@ if tab_admin:
             st.markdown("---")
             st.subheader("4. 最新アセスメント回答通知 ＆ AIセールスレコメンド")
             
-            # Firestoreから全回答をロード
             resp_df_all = load_responses_from_firestore()
             if resp_df_all.empty:
                 st.info("まだ回答データが存在しません。")
             else:
-                # 最も新しいタイムスタンプを取得
                 latest_ts = resp_df_all['timestamp'].max()
-                
-                # そのタイムスタンプを持つ回答者の一連の回答行を抽出
                 latest_rows = resp_df_all[resp_df_all['timestamp'] == latest_ts]
                 
                 if not latest_rows.empty:
-                    # 代表情報を取得
                     first_row = latest_rows.iloc[0]
                     res_name = first_row.get("respondent", "匿名")
                     res_team = first_row.get("team", "部署未設定")
@@ -1434,9 +1230,8 @@ if tab_admin:
                     
                     formatted_ts = str(latest_ts).replace("T", " ")[:19]
                     
-                    # アンケートタイプの判定
                     qids = latest_rows['question_id'].tolist()
-                    survey_type_lbl = "設備管理成熟度診断 (IFM)"
+                    survey_type_lbl = "設備管理成熟度アセスメント (IFM)"
                     if any(str(q).startswith("FC") for q in qids):
                         survey_type_lbl = "工場設計・プロダクトクラウド適性診断"
                     elif any(str(q).startswith("AE") for q in qids):
@@ -1457,7 +1252,6 @@ if tab_admin:
                         unsafe_allow_html=True
                     )
                     
-                    # Gap計算
                     gaps = []
                     for _, row in latest_rows.iterrows():
                         as_is_val = row.get("as_is")
@@ -1475,18 +1269,15 @@ if tab_admin:
                     
                     if gaps_sorted:
                         top_gap = gaps_sorted[0]
-                        # AI推奨アプローチ・セールストークロジック
                         recommendations_map = {
-                            # Factory Cloud
                             "FC01": "Formaによる敷地風向・日影解析デモをオファーし、『初期計画段階でのAI迅速シミュレーションによる手戻り削減』をフックにアプローチしてください。",
                             "FC02": "FlexSimによる工程シミュレーションデモを提案。『時間軸を考慮した設備能力と搬送ルートの最適化』をアピールして、工場部門への商談を開始してください。",
-                            "FC03": "Factory Design Utilities (FDU) を紹介。『AutoCADとInventorの2D/3D双方向同期による干渉チェック』が最も響くアプローチです。",
+                            "FC03": "Factory Design Utilities (FDU) を紹介。『AutoCADとInventor of 2D/3D双方向同期による干渉チェック』が最も響くアプローチです。",
                             "FC04": "AIモデリング（Navastoなど）やジェネレーティブデザインの紹介スライドを持参し、設計プロセスの自律化を切り口に会話を展開してください。",
                             "FC05": "AutoCAD専用ツールセットやAPI/LISPによる作図・BOM出力の『定型業務自動化』をフックにし、開発期間の圧縮を提案してください。",
                             "FC06": "Autodesk Construction Cloud (ACC) CDEによる『サプライヤとの安全なリアルタイム3Dモデル共有・整合性維持』をテーマに会話を構築してください。",
                             "FC07": "FlexSim VRを用いた『バーチャル工場内覧会・VR役員合意形成』のデモを提案し、意思決定の迅速化を支援してください。",
                             "FC08": "Inventor iLogicを活用した『パラメータ駆動型設計の自動化・仕様変更に伴う図面自動更新』の自動化導入ワークショップを提案してください。",
-                            # AEC BIM
                             "AE01": "Autodesk Formaを用いた環境シミュレーションを提案。初期段階で騒音や日影の風向問題を秒速で解決する事例が刺さります。",
                             "AE02": "Revitの3D BIM設計への移行支援プログラムをオファー。2Dから3Dへの移行に伴う図面の一貫性確保が最大のセールスポイントです。",
                             "AE03": "Navisworksによる複数領域データの重ね合わせ・自動干渉検出のデモを提案し、現場施工段階の手戻り削減効果を訴求してください。",
@@ -1494,17 +1285,15 @@ if tab_admin:
                             "AE05": "ACC Takeoffを用いた3D/2D統合数量算出による見積の高速化・高精度化のソリューション資料をオファーしてください。",
                             "AE06": "ACC Buildを用いた現場デジタル施工管理（モバイルでの図面閲覧や指摘管理）を提案し、現場監督の直行直帰促進をアピールしてください。",
                             "AE07": "Navisworks 4D工程シミュレーションにより、工期遅延リスクを3Dビジュアルで事前に洗い出す検証デモをオファーしてください。",
-                            "AE08": "Autodesk Tandemを用いたデジタルツイン竣工FMデータ構築プログラムを提案。スマートビルディング化への道筋を示してください。",
-                            # Civil CIM
-                            "CI01": "InfraWorksによる広域CIM地形モデル構築のデモを提案。現況地形と道路設計の3Dビジュアルでの比較検証を訴求してください。",
+                            "AE08": "Autodesk Tandemを用いたデジタルツイン FMデータ構築プログラムを提案。FM化への道筋を示してください。",
+                            "CI01": "InfraWorksによる広域CIM地形モデル構築のデモを提案。現況地形と道路設計の3D比較を訴求してください。",
                             "CI02": "Civil 3DによるCIM道路線形設計・パラメトリック法面展開の自動更新デモを提案し、設計変更への耐性をアピールしてください。",
                             "CI03": "Revit構造物（橋梁等）とCivil 3D道路線形の動的同期による干渉チェック＆座標自動補正デモが極めて有効です。",
                             "CI04": "Civil 3Dサーフェス比較を用いた高精度土量計算と、切盛土バランスの自動最適化ツールをフックに提案してください。",
-                            "CI05": "ACC Collaboration for Civil 3Dによる大容量地形点群と線形データの安全なチーム間共有手法をテーマにオファーしてください。",
+                            "CI05": "ACC Collaboration for Civil 3Dによるチーム間共有手法をテーマにオファーしてください。",
                             "CI06": "InfraWorksを用いた発注者や住民向け説明用のCIM 3Dビジュアル合意形成パッケージをオファーしてください。",
                             "CI07": "ReCap Proによるドローン点群からの地形面抽出・Civil 3D地形サーフェス化によるi-Construction出来形管理を提案してください。",
                             "CI08": "Civil 3DとTandemを組み合わせたCIM電子納品対応・維持管理データベース移行自動化ワークフローを提案してください。",
-                            # MFG PDM
                             "MF01": "Inventor詳細設計とBOM（部品構成表）の完全連動デモを提案し、BOMの手入力ミスや不整合削減を訴求してください。",
                             "MF02": "Inventor Nastranによる設計段階での強度・熱応力FEA解析デモを提案。試作手戻りの劇的削減をアピールしてください。",
                             "MF03": "VaultによるPDMデータ管理（リビジョン管理・承認フロー自動統制・重複設計の防止）のデモ・体験会をオファーしてください。",
