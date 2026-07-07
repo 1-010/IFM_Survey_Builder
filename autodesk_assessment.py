@@ -8,9 +8,6 @@ import gspread
 from google.oauth2.service_account import Credentials
 import re
 import os
-import tempfile
-from fpdf import FPDF
-import urllib.request
 
 # Import Firestore helpers
 from db_helper import (
@@ -226,117 +223,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# FPDF日本語フォント自動解決＆PDF出力エンジン
-def generate_pdf_report_bytes(res_name, res_email, res_team, res_exp, answers_list, gaps_sorted, proposals_dict, survey_title):
-    font_path = os.path.join(tempfile.gettempdir(), "NotoSansJP-Regular.ttf")
-    if not os.path.exists(font_path):
-        try:
-            url = "https://github.com/shindome/noto-emoji-jp/raw/master/fonts/NotoSansJP-Regular.ttf"
-            urllib.request.urlretrieve(url, font_path)
-        except:
-            pass
-            
-    pdf = FPDF()
-    pdf.add_page()
-    
-    has_noto = os.path.exists(font_path)
-    if has_noto:
-        pdf.add_font("NotoSansJP", "", font_path)
-        pdf.set_font("NotoSansJP", size=10)
-    else:
-        pdf.set_font("Helvetica", size=10)
-        
-    # Title Header (Black Autodesk Banner)
-    pdf.set_fill_color(0, 0, 0)
-    pdf.rect(0, 0, 210, 42, "F")
-    
-    pdf.set_text_color(255, 255, 255)
-    if has_noto:
-        pdf.set_font("NotoSansJP", size=15)
-        pdf.text(15, 20, "AUTODESK SOLUTION ASSESSMENT REPORT")
-        pdf.set_font("NotoSansJP", size=10)
-        pdf.text(15, 30, f"{survey_title} - 診断結果レポート")
-    else:
-        pdf.set_font("Helvetica", size=14)
-        pdf.text(15, 20, "AUTODESK SOLUTION ASSESSMENT REPORT")
-        pdf.set_font("Helvetica", size=10)
-        pdf.text(15, 30, "Assessment Result Report")
-    
-    # Client Info Block
-    pdf.set_text_color(0, 0, 0)
-    pdf.set_fill_color(245, 245, 242)
-    pdf.rect(15, 50, 180, 30, "F")
-    
-    if has_noto:
-        pdf.set_font("NotoSansJP", size=9)
-        pdf.text(20, 57, f"回答者氏名: {res_name} 様")
-        pdf.text(20, 64, f"部署・チーム: {res_team if res_team else '未登録'}")
-        pdf.text(20, 71, f"連絡先メール: {res_email}  (経験年数: {res_exp})")
-        
-        # Gap analysis Table
-        pdf.set_font("NotoSansJP", size=11)
-        pdf.text(15, 95, "アセスメント評価 Gap 分析")
-        
-        pdf.line(15, 99, 195, 99)
-        pdf.set_font("NotoSansJP", size=8.5)
-        pdf.text(17, 104, "設問ID")
-        pdf.text(32, 104, "評価カテゴリ / フェーズ")
-        pdf.text(125, 104, "As-Is (現状)")
-        pdf.text(150, 104, "To-Be (目標)")
-        pdf.text(175, 104, "Gap (乖離)")
-        pdf.line(15, 107, 195, 107)
-    else:
-        pdf.set_font("Helvetica", size=9)
-        pdf.text(20, 57, f"Respondent: {res_name}")
-        pdf.text(20, 64, f"Department/Team: {res_team if res_team else 'N/A'}")
-        pdf.text(20, 71, f"Email: {res_email}  (Experience: {res_exp})")
-        
-        pdf.set_font("Helvetica", size=11)
-        pdf.text(15, 95, "Assessment Gap Analysis")
-        
-        pdf.line(15, 99, 195, 99)
-        pdf.set_font("Helvetica", size=8.5)
-        pdf.text(17, 104, "QID")
-        pdf.text(32, 104, "Category / Phase")
-        pdf.text(125, 104, "As-Is")
-        pdf.text(150, 104, "To-Be")
-        pdf.text(175, 104, "Gap")
-        pdf.line(15, 107, 195, 107)
-    
-    y = 113
-    for a in answers_list:
-        pdf.text(17, y, str(a["question_id"]))
-        if has_noto:
-            pdf.text(32, y, f"{a['phase']} ({a['department']})")
-        else:
-            pdf.text(32, y, f"Phase {a['question_id']} ({a['department']})")
-        pdf.text(133, y, str(a["as_is"]))
-        pdf.text(158, y, str(a["to_be"]))
-        
-        gap_val = 0
-        if a["as_is"] != "N/A" and a["to_be"] != "N/A":
-            gap_val = int(a["to_be"]) - int(a["as_is"])
-            
-        pdf.text(180, y, str(gap_val) if a["as_is"] != "N/A" else "N/A")
-        y += 7
-        
-    pdf.line(15, y-2, 195, y-2)
-    
-    # Summary of gaps
-    pdf.ln(y - 95 + 10)
-    if has_noto:
-        pdf.set_font("NotoSansJP", size=11)
-        pdf.cell(0, 10, "推奨ソリューションのご案内", ln=True)
-        pdf.set_font("NotoSansJP", size=8.5)
-        pdf.multi_cell(180, 5, "アセスメントは正常に送信完了いたしました。各設問の乖離値（Gap）の分析結果は上記テーブルの通りです。詳細な推奨ソリューションおよび個別提案書につきましては、担当営業より別途ご案内させていただきます。")
-    else:
-        pdf.set_font("Helvetica", size=11)
-        pdf.cell(0, 10, "Recommended Solutions Info", ln=True)
-        pdf.set_font("Helvetica", size=8.5)
-        pdf.multi_cell(180, 5, "Your assessment answers have been safely submitted. The gap analysis results are shown in the table above. Detailed proposal materials and custom recommendation scenarios will be delivered to you shortly by our sales team.")
-        
-    return pdf.output()
-
 # Google Sheets Helper Functions
 def get_gspread_client():
     if "gserviceaccount" not in st.secrets:
@@ -509,58 +395,6 @@ with tab_input:
             st.success("アセスメントの回答が安全に記録されました。ご協力ありがとうございました。")
             st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
             
-            # Gap分析
-            gaps = []
-            answers_list_for_pdf = []
-            for _, r in q_df.iterrows():
-                qid = r['question_id']
-                is_skipped = st.session_state.get(f"skip_{qid}", False)
-                as_is = st.session_state.get(f"asis_{qid}", 2) if not is_skipped else "N/A"
-                to_be = st.session_state.get(f"tobe_{qid}", 4) if not is_skipped else "N/A"
-                
-                answers_list_for_pdf.append({
-                    "question_id": qid,
-                    "phase": r["phase"],
-                    "department": r["department"],
-                    "as_is": as_is,
-                    "to_be": to_be
-                })
-                
-                if not is_skipped:
-                    gaps.append({
-                        "question_id": qid,
-                        "gap": to_be - as_is,
-                        "to_be": to_be
-                    })
-            
-            gaps_sorted = sorted(gaps, key=lambda x: (x["gap"], x["to_be"]), reverse=True)
-            
-            # PDF診断書ダウンロードボタンの実装（堅牢な例外保護付き）
-            pdf_data = None
-            try:
-                with st.spinner("PDFレポートを準備中..."):
-                    pdf_data = generate_pdf_report_bytes(
-                        res_name=st.session_state.get("res_name", "テスト回答者"),
-                        res_email=st.session_state.get("res_email", "info@autodesk.com"),
-                        res_team=st.session_state.get("res_team", "未設定"),
-                        res_exp=st.session_state.get("res_exp", "未設定"),
-                        answers_list=answers_list_for_pdf,
-                        gaps_sorted=gaps_sorted,
-                        proposals_dict={},
-                        survey_title="設備管理成熟度アセスメント"
-                    )
-            except Exception as e:
-                st.warning(f"PDF生成中にエラーが発生しました（安全のため標準レイアウトへフォールバックします）: {e}")
-            
-            if pdf_data:
-                st.download_button(
-                    label="診断結果レポート (PDF) をダウンロード",
-                    data=pdf_data,
-                    file_name=f"Autodesk_IFM_Report_{active_survey_id}.pdf",
-                    mime="application/pdf",
-                    use_container_width=True
-                )
-            
             st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
             if st.button("アセスメントを再回答する", type="secondary", use_container_width=True):
                 st.session_state.is_submitted = False
@@ -630,11 +464,11 @@ with tab_input:
                     unsafe_allow_html=True
                 )
                 
-                # スキップトグル (イエローを使用せず視認性の高いグリーンアクティブスタイル)
+                # スキップトグル (イエローを使用せず視認性の高いグリーンアクティブスタイル。回答済みのステップは強制ロック)
                 skip_key = f"skip_{qid}"
                 if skip_key not in st.session_state:
                     st.session_state[skip_key] = False
-                skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key)
+                skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key, disabled=(step_idx < st.session_state.current_step))
                 
                 # スライダー値の取得
                 asis_key = f"asis_{qid}"
@@ -677,7 +511,7 @@ with tab_input:
                     levels_html += "</div>"
                     st.markdown(levels_html, unsafe_allow_html=True)
                     
-                    # カラー同期されたスライダーの描画
+                    # カラー同期されたスライダーの描画 (回答済みのステップは強制ロック)
                     col_s1, col_s2 = st.columns(2)
                     with col_s1:
                         st.markdown("<div class='asis-slider-container'>", unsafe_allow_html=True)
@@ -940,18 +774,54 @@ if tab_dashboard:
                     df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
                     df_b = pd.DataFrame()
 
-                # レーダーチャート比較プロット
-                agg_a = df_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
-                agg_a = agg_a.sort_values('question_id')
-                theta_labels = [f"{row['phase']}\n({row['question_id']})" for _, row in agg_a.iterrows()]
+                # レーダーチャート比較プロットの全アセスメントモデル動的対応
+                # 取得データに含まれる question_id からモデルを判別
+                def detect_survey_type_and_sort(df):
+                    if df.empty:
+                        return df, []
+                    
+                    qids = df['question_id'].unique()
+                    all_qs = load_all_questions_json()
+                    
+                    # 判別ロジック
+                    if any(str(q).startswith("FC") for q in qids):
+                        base_qs = all_qs.get("factory_cloud_questions", [])
+                    elif any(str(q).startswith("AE") for q in qids):
+                        base_qs = all_qs.get("aec_questions", [])
+                    elif any(str(q).startswith("CI") for q in qids):
+                        base_qs = all_qs.get("civil_questions", [])
+                    elif any(str(q).startswith("MF") for q in qids):
+                        base_qs = all_qs.get("mfg_questions", [])
+                    else:
+                        base_qs = all_qs.get("questions", [])
+                        
+                    # 正しい設問順序リストを作成
+                    order_map = {q["question_id"]: i for i, q in enumerate(base_qs)}
+                    
+                    df_sorted = df.copy()
+                    df_sorted["sort_idx"] = df_sorted["question_id"].map(order_map).fillna(99)
+                    df_sorted = df_sorted.sort_values("sort_idx")
+                    
+                    theta_labels = [f"{q['phase']}\n({q['question_id']})" for q in base_qs if q["question_id"] in qids]
+                    # 万が一qidsの中にbase_qsにないものがある場合、末尾に付け足す
+                    for qid in qids:
+                        if qid not in order_map:
+                            theta_labels.append(f"不明\n({qid})")
+                            
+                    return df_sorted, theta_labels
+
+                df_a_sorted, theta_labels = detect_survey_type_and_sort(df_a)
+                
+                agg_a = df_a_sorted.groupby(['question_id', 'phase', 'sort_idx'])[['as_is', 'to_be']].mean().reset_index()
+                agg_a = agg_a.sort_values('sort_idx')
                 
                 fig = go.Figure()
-                if not agg_a.empty:
+                if not agg_a.empty and theta_labels:
                     fig.add_trace(go.Scatterpolar(
                         r=agg_a['as_is'].tolist() + [agg_a['as_is'].tolist()[0]],
                         theta=theta_labels + [theta_labels[0]],
                         fill='toself',
-                        name='グループA: 現状の評価',
+                        name='グループA: 現状の評価 (As-Is)',
                         line_color='#1D91D0',
                         fillcolor='rgba(29, 145, 208, 0.1)',
                         line=dict(width=1.5)
@@ -960,21 +830,22 @@ if tab_dashboard:
                         r=agg_a['to_be'].tolist() + [agg_a['to_be'].tolist()[0]],
                         theta=theta_labels + [theta_labels[0]],
                         fill='toself',
-                        name='グループA: 将来の目標',
+                        name='グループA: 将来の目標 (To-Be)',
                         line_color='#2AD0A9',
                         fillcolor='rgba(42, 208, 169, 0.05)',
                         line=dict(width=1.2, dash='dash')
                     ))
                 
                 if compare_mode and not df_b.empty:
-                    agg_b = df_b.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
-                    agg_b = agg_b.sort_values('question_id')
-                    if not agg_b.empty:
+                    df_b_sorted, _ = detect_survey_type_and_sort(df_b)
+                    agg_b = df_b_sorted.groupby(['question_id', 'phase', 'sort_idx'])[['as_is', 'to_be']].mean().reset_index()
+                    agg_b = agg_b.sort_values('sort_idx')
+                    if not agg_b.empty and theta_labels:
                         fig.add_trace(go.Scatterpolar(
                             r=agg_b['as_is'].tolist() + [agg_b['as_is'].tolist()[0]],
                             theta=theta_labels + [theta_labels[0]],
                             fill='toself',
-                            name='グループB: 現状の評価',
+                            name='グループB: 現状の評価 (As-Is)',
                             line_color='#F2520A',
                             fillcolor='rgba(242, 82, 10, 0.1)',
                             line=dict(width=1.5)
@@ -1012,15 +883,15 @@ if tab_dashboard:
                 else:
                     st.markdown("<p style='font-size:0.92rem; color:#D5D5CB; margin-bottom:15px;'>同じアンケートIDに対する複数名の回答から、現場層（勤続年数5年未満）と意思決定層（勤続年数10年以上）の間の【認識ギャップ】を抽出します。</p>", unsafe_allow_html=True)
                     
-                    genba_df = df_a[df_a['experience_years'].isin(["0～2年", "2～5年"])]
-                    mgmt_df = df_a[df_a['experience_years'].isin(["10～15年", "15年以上"])]
+                    genba_df = df_a_sorted[df_a_sorted['experience_years'].isin(["0～2年", "2～5年"])]
+                    mgmt_df = df_a_sorted[df_a_sorted['experience_years'].isin(["10～15年", "15年以上"])]
                     
-                    agg_genba = genba_df.groupby(['question_id', 'phase'])['as_is'].mean().reset_index().sort_values('question_id')
-                    agg_mgmt = mgmt_df.groupby(['question_id', 'phase'])['as_is'].mean().reset_index().sort_values('question_id')
+                    agg_genba = genba_df.groupby(['question_id', 'phase', 'sort_idx'])['as_is'].mean().reset_index().sort_values('sort_idx')
+                    agg_mgmt = mgmt_df.groupby(['question_id', 'phase', 'sort_idx'])['as_is'].mean().reset_index().sort_values('sort_idx')
                     
                     fig_gap = go.Figure()
                     
-                    if not agg_genba.empty:
+                    if not agg_genba.empty and theta_labels:
                         fig_gap.add_trace(go.Scatterpolar(
                             r=agg_genba['as_is'].tolist() + [agg_genba['as_is'].tolist()[0]],
                             theta=theta_labels + [theta_labels[0]],
@@ -1031,7 +902,7 @@ if tab_dashboard:
                             line=dict(width=1.5)
                         ))
                         
-                    if not agg_mgmt.empty:
+                    if not agg_mgmt.empty and theta_labels:
                         fig_gap.add_trace(go.Scatterpolar(
                             r=agg_mgmt['as_is'].tolist() + [agg_mgmt['as_is'].tolist()[0]],
                             theta=theta_labels + [theta_labels[0]],
@@ -1072,13 +943,13 @@ if tab_dashboard:
                         st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-bottom:10px;'>🚨 組織内認識不一致度アラート</h5>", unsafe_allow_html=True)
                         
                         gap_details = []
-                        for q in df_a['question_id'].unique():
+                        for q in df_a_sorted['question_id'].unique():
                             val_genba = genba_df[genba_df['question_id'] == q]['as_is'].mean()
                             val_mgmt = mgmt_df[mgmt_df['question_id'] == q]['as_is'].mean()
                             
                             if pd.notna(val_genba) and pd.notna(val_mgmt):
                                 diff = abs(val_mgmt - val_genba)
-                                phase_name = df_a[df_a['question_id'] == q]['phase'].iloc[0]
+                                phase_name = df_a_sorted[df_a_sorted['question_id'] == q]['phase'].iloc[0]
                                 gap_details.append({"qid": q, "phase": phase_name, "diff": diff, "genba": val_genba, "mgmt": val_mgmt})
                                 
                         gap_details_sorted = sorted(gap_details, key=lambda x: x["diff"], reverse=True)
@@ -1096,7 +967,7 @@ if tab_dashboard:
                                     )
                                     display_err_count += 1
                             if display_err_count == 0:
-                                st.write("現場層と意思決定層의 認識ギャップはありません。")
+                                st.write("現場層と意思決定層の間で認識ギャップはありません。")
                         else:
                             st.write("データが不足しています。")
         else:
@@ -1281,7 +1152,7 @@ if tab_admin:
                             "AE01": "Autodesk Formaを用いた環境シミュレーションを提案。初期段階で騒音や日影の風向問題を秒速で解決する事例が刺さります。",
                             "AE02": "Revitの3D BIM設計への移行支援プログラムをオファー。2Dから3Dへの移行に伴う図面の一貫性確保が最大のセールスポイントです。",
                             "AE03": "Navisworksによる複数領域データの重ね合わせ・自動干渉検出のデモを提案し、現場施工段階の手戻り削減効果を訴求してください。",
-                            "AE04": "ACC Docs/Design CollaborateによるISO 19650準拠のクラウドCDEコラボレーションの価値、データ紛失防止を提案してください。",
+                            "AE04": "ACC Docs/Design CollaborateによるISO 19650準拠 of クラウドCDEコラボレーションの価値、データ紛失防止を提案してください。",
                             "AE05": "ACC Takeoffを用いた3D/2D統合数量算出による見積の高速化・高精度化のソリューション資料をオファーしてください。",
                             "AE06": "ACC Buildを用いた現場デジタル施工管理（モバイルでの図面閲覧や指摘管理）を提案し、現場監督の直行直帰促進をアピールしてください。",
                             "AE07": "Navisworks 4D工程シミュレーションにより、工期遅延リスクを3Dビジュアルで事前に洗い出す検証デモをオファーしてください。",
