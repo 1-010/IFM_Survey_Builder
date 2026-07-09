@@ -464,7 +464,7 @@ with tab_input:
                     unsafe_allow_html=True
                 )
                 
-                # スキップトグル (イエローを使用せず視認性の高いグリーンアクティブスタイル。回答済みのステップは強制ロック)
+                # スキップトグル (回答済みのステップは強制ロック)
                 skip_key = f"skip_{qid}"
                 if skip_key not in st.session_state:
                     st.session_state[skip_key] = False
@@ -711,20 +711,61 @@ if tab_dashboard:
         
         if dash_pw == "ifm-sales":
             st.success("認証されました。")
-            resp_df = load_all_responses_merged()
+            resp_df_raw = load_all_responses_merged()
             
-            if resp_df.empty:
+            if resp_df_raw.empty:
                 st.warning("現在、回答データが存在しません。")
             else:
-                st.subheader("絞り込みとグループ比較")
-                compare_mode = st.checkbox("2つのグループを比較する（比較モード）", value=False, key="dash_compare")
+                # 各回答レコードにサーベイタイプ属性を追加
+                def get_survey_type_by_qid(qid):
+                    if str(qid).startswith("FC"):
+                        return "工場設計・プロダクトクラウド"
+                    elif str(qid).startswith("AE"):
+                        return "建築設計・施工 BIM"
+                    elif str(qid).startswith("CI"):
+                        return "土木・インフラ CIM"
+                    elif str(qid).startswith("MF"):
+                        return "製品設計・開発 デジタル"
+                    else:
+                        return "IFM 設備管理成熟度"
                 
+                resp_df_raw["survey_type"] = resp_df_raw["question_id"].apply(get_survey_type_by_qid)
+                
+                st.subheader("絞り込みとグループ比較")
+                
+                # 1. まず大元のサーベイモデルでのフィルタ
+                unique_survey_types = ["すべて", "IFM 設備管理成熟度", "工場設計・プロダクトクラウド", "建築設計・施工 BIM", "土木・インフラ CIM", "製品設計・開発 デジタル"]
+                selected_survey_type = st.selectbox("分析対象サーベイモデル (設問体系)", unique_survey_types, key="main_survey_type_filter")
+                
+                # サーベイタイプで足切りしたデータ
+                if selected_survey_type == "すべて":
+                    resp_df = resp_df_raw.copy()
+                else:
+                    resp_df = resp_df_raw[resp_df_raw["survey_type"] == selected_survey_type]
+                
+                # 2. 連動して他のフィルタ用ユニークリストを作成
                 unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
                 registered_surveys = get_all_custom_survey_ids()
                 unique_surveys = sorted(list(set([str(s) for s in resp_df['survey_id'].unique() if s and pd.notna(s)] + registered_surveys + ["default"])))
                 unique_years = ["すべて", "0～2年", "2～5年", "5～10年", "10～15年", "15年以上"]
                 
-                def filter_data(data, domain, exp, team_kw, category, survey):
+                # サーベイタイプに応じた動的な部門（カテゴリ）の選択肢
+                if "建築設計" in selected_survey_type:
+                    cat_options = ["両方", "設計のみ", "施工のみ"]
+                    cat_map = {"両方": "両方", "設計のみ": "設計", "施工のみ": "施工"}
+                elif "土木" in selected_survey_type:
+                    cat_options = ["両方", "設計のみ", "施工のみ"]
+                    cat_map = {"両方": "両方", "設計のみ": "設計", "施工のみ": "施工"}
+                elif "製品設計" in selected_survey_type:
+                    cat_options = ["両方", "設計のみ", "製造のみ"]
+                    cat_map = {"両方": "両方", "設計のみ": "設計", "製造のみ": "製造"}
+                else:
+                    cat_options = ["両方", "生産技術のみ", "工場建築・建設のみ"]
+                    cat_map = {"両方": "両方", "生産技術のみ": "生産技術", "工場建築・建設のみ": "工場建築・建設"}
+
+                compare_mode = st.checkbox("2つのグループを比較する（比較モード）", value=False, key="dash_compare")
+
+                def filter_data(data, domain, exp, team_kw, cat_selection, survey):
                     filtered = data.copy()
                     if survey != "すべて":
                         filtered = filtered[filtered['survey_id'] == survey]
@@ -734,10 +775,10 @@ if tab_dashboard:
                         filtered = filtered[filtered['experience_years'] == exp]
                     if team_kw.strip():
                         filtered = filtered[filtered['team'].str.contains(team_kw.strip(), case=False, na=False)]
-                    if category == "生産技術のみ":
-                        filtered = filtered[filtered['department'] == "生産技術"]
-                    elif category == "工場建築・建設のみ":
-                        filtered = filtered[filtered['department'] == "工場建築・建設"]
+                    
+                    target_dept = cat_map.get(cat_selection)
+                    if target_dept and target_dept != "両方":
+                        filtered = filtered[filtered['department'] == target_dept]
                     return filtered
 
                 if compare_mode:
@@ -748,7 +789,7 @@ if tab_dashboard:
                         domain_a = st.selectbox("ドメイン (グループA)", ["すべて"] + unique_domains, key="domain_a")
                         exp_a = st.selectbox("勤続年数 (グループA)", unique_years, key="exp_a")
                         team_a = st.text_input("部署名（部分一致・グループA）", key="team_a", placeholder="例: 技術部")
-                        cat_a = st.radio("表示カテゴリ (グループA)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_a", horizontal=True)
+                        cat_a = st.radio("表示カテゴリ (グループA)", cat_options, key="cat_a", horizontal=True)
                         
                     with col_filter_b:
                         st.markdown("#### グループB の条件")
@@ -756,7 +797,7 @@ if tab_dashboard:
                         domain_b = st.selectbox("ドメイン (グループB)", ["すべて"] + unique_domains, key="domain_b")
                         exp_b = st.selectbox("勤続年数 (グループB)", unique_years, key="exp_b")
                         team_b = st.text_input("部署名（部分一致・グループB）", key="team_b", placeholder="例: 建築")
-                        cat_b = st.radio("表示カテゴリ (グループB)", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="cat_b", horizontal=True)
+                        cat_b = st.radio("表示カテゴリ (グループB)", cat_options, key="cat_b", horizontal=True)
                         
                     df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
                     df_b = filter_data(resp_df, domain_b, exp_b, team_b, cat_b, survey_b)
@@ -770,12 +811,59 @@ if tab_dashboard:
                         exp_a = st.selectbox("勤続年数", unique_years, key="single_exp")
                     with col_f4:
                         team_a = st.text_input("部署名（部分一致で検索）", key="single_team", placeholder="例: 生産技術")
-                    cat_a = st.radio("表示カテゴリ", ["両方", "生産技術のみ", "工場建築・建設のみ"], key="single_cat", horizontal=True)
+                    cat_a = st.radio("表示カテゴリ", cat_options, key="single_cat", horizontal=True)
                     df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
                     df_b = pd.DataFrame()
 
+                # --- 📊 サマリーインフォメーション (回答人数) ---
+                st.markdown("<hr style='border-color:#333333; margin:15px 0;'>", unsafe_allow_html=True)
+                col_sum1, col_sum2 = st.columns([1, 2])
+                with col_sum1:
+                    num_a = df_a['email'].nunique() if not df_a.empty else 0
+                    if compare_mode:
+                        num_b = df_b['email'].nunique() if not df_b.empty else 0
+                        st.metric("有効回答者数 (グループA / B)", f"{num_a}名 / {num_b}名")
+                    else:
+                        st.metric("有効回答者数 (選択グループ)", f"{num_a}名")
+                
+                with col_sum2:
+                    if not df_a.empty:
+                        # アンケートIDごとの回答人数内訳表示
+                        cnt_df = df_a.groupby('survey_id')['email'].nunique().reset_index()
+                        cnt_df.columns = ["アンケートID (サーベイID)", "回答人数"]
+                        st.dataframe(cnt_df, use_container_width=True, hide_index=True, height=110)
+                    else:
+                        st.write("該当するデータがありません")
+
+                # --- ⬇ 生データダウンロード (CSV) ---
+                if not df_a.empty:
+                    # 回答者ごとに1行にするワイド形式の作成
+                    try:
+                        df_wide = df_a.pivot_table(
+                            index=["timestamp", "respondent", "email", "experience_years", "team", "survey_id", "survey_type"],
+                            columns="question_id",
+                            values=["as_is", "to_be"],
+                            aggfunc="first"
+                        )
+                        # カラム名のフラット化
+                        df_wide.columns = [f"{val}_{qid}" for val, qid in df_wide.columns]
+                        df_wide = df_wide.reset_index()
+                        
+                        csv_data = df_wide.to_csv(index=False, encoding='utf-8-sig') # Excelで開いても文字化けしないBOM付UTF-8
+                        
+                        st.download_button(
+                            label=f"⬇ 選択したデータの生回答一覧 (CSV) をダウンロード",
+                            data=csv_data,
+                            file_name=f"autodesk_assessment_raw_{selected_survey_type}_{survey_a}.csv",
+                            mime="text/csv",
+                            use_container_width=True
+                        )
+                    except Exception as e:
+                        st.warning(f"CSV変換中にエラーが発生しました: {e}")
+
+                st.markdown("<h4 style='margin-top:15px; margin-bottom:5px; color:#FFFFFF;'>アセスメント レーダーチャート比較</h4>", unsafe_allow_html=True)
+
                 # レーダーチャート比較プロットの全アセスメントモデル動的対応
-                # 取得データに含まれる question_id からモデルを判別
                 def detect_survey_type_and_sort(df):
                     if df.empty:
                         return df, []
@@ -803,7 +891,6 @@ if tab_dashboard:
                     df_sorted = df_sorted.sort_values("sort_idx")
                     
                     theta_labels = [f"{q['phase']}\n({q['question_id']})" for q in base_qs if q["question_id"] in qids]
-                    # 万が一qidsの中にbase_qsにないものがある場合、末尾に付け足す
                     for qid in qids:
                         if qid not in order_map:
                             theta_labels.append(f"不明\n({qid})")
@@ -1144,7 +1231,7 @@ if tab_admin:
                             "FC01": "Formaによる敷地風向・日影解析デモをオファーし、『初期計画段階でのAI迅速シミュレーションによる手戻り削減』をフックにアプローチしてください。",
                             "FC02": "FlexSimによる工程シミュレーションデモを提案。『時間軸を考慮した設備能力と搬送ルートの最適化』をアピールして、工場部門への商談を開始してください。",
                             "FC03": "Factory Design Utilities (FDU) を紹介。『AutoCADとInventor of 2D/3D双方向同期による干渉チェック』が最も響くアプローチです。",
-                            "FC04": "AIモデリング（Navastoなど）やジェネレーティブデザインの紹介スライドを持参し、設計プロセスの自律化を切り口に会話を展開してください。",
+                            "FC04": "AIモデリング（Navastoなど）やジェネレーティブデザイン of 紹介スライドを持参し、設計プロセスの自律化を切り口に会話を展開してください。",
                             "FC05": "AutoCAD専用ツールセットやAPI/LISPによる作図・BOM出力の『定型業務自動化』をフックにし、開発期間の圧縮を提案してください。",
                             "FC06": "Autodesk Construction Cloud (ACC) CDEによる『サプライヤとの安全なリアルタイム3Dモデル共有・整合性維持』をテーマに会話を構築してください。",
                             "FC07": "FlexSim VRを用いた『バーチャル工場内覧会・VR役員合意形成』のデモを提案し、意思決定の迅速化を支援してください。",
