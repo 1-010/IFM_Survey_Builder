@@ -79,6 +79,24 @@ st.markdown(
         background-color: #121212 !important;
         color: #FFFFFF !important;
     }
+
+    div[data-baseweb="input"] input,
+    div[data-baseweb="textarea"] textarea,
+    div[data-baseweb="select"] input,
+    .stTextInput input,
+    .stTextArea textarea {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        caret-color: #FFFFFF !important;
+    }
+    div[data-baseweb="input"] input::placeholder,
+    div[data-baseweb="textarea"] textarea::placeholder,
+    .stTextInput input::placeholder,
+    .stTextArea textarea::placeholder {
+        color: #8C9BA5 !important;
+        -webkit-text-fill-color: #8C9BA5 !important;
+        opacity: 1 !important;
+    }
     
     div.stButton > button[data-testid="stBaseButton-primary"] {
         background-color: #FFFF00 !important;

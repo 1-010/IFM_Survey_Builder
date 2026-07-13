@@ -47,3 +47,35 @@ def test_portal_deep_links_are_routed_to_the_requested_tab():
     source = (ROOT / "autodesk_assessment.py").read_text(encoding="utf-8")
     assert 'requested_tab == "admin"' in source
     assert 'requested_tab == "dashboard"' in source
+
+
+def test_dark_survey_inputs_style_the_actual_editable_element():
+    survey_files = [
+        "autodesk_assessment.py",
+        "autodesk_aec_survey.py",
+        "autodesk_civil_survey.py",
+        "autodesk_factory_survey.py",
+        "autodesk_mfg_survey.py",
+    ]
+    for filename in survey_files:
+        source = (ROOT / filename).read_text(encoding="utf-8")
+        assert 'div[data-baseweb="input"] input' in source
+        assert "-webkit-text-fill-color: #FFFFFF" in source
+        assert "caret-color: #FFFFFF" in source
+
+
+def test_dashboard_reads_canonical_firestore_before_legacy_sheets():
+    source = (ROOT / "autodesk_assessment.py").read_text(encoding="utf-8")
+    function_source = source.split("def load_all_responses_merged():", 1)[1].split(
+        "def is_valid_email", 1
+    )[0]
+    assert function_source.index("load_responses_from_firestore()") < function_source.index(
+        "load_responses_from_sheets()"
+    )
+    assert "client.http_client.timeout = (5, 12)" in source
+
+
+def test_firestore_reads_have_bounded_timeouts():
+    source = (ROOT / "db_helper.py").read_text(encoding="utf-8")
+    assert "FIRESTORE_TIMEOUT_SECONDS" in source
+    assert "timeout=FIRESTORE_TIMEOUT_SECONDS" in source

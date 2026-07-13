@@ -1,7 +1,12 @@
 import streamlit as st
 import pandas as pd
 from google.cloud import firestore
+from google.api_core.retry import Retry
 from google.oauth2.service_account import Credentials
+
+
+FIRESTORE_TIMEOUT_SECONDS = 12
+FIRESTORE_READ_RETRY = Retry(deadline=FIRESTORE_TIMEOUT_SECONDS)
 
 def get_firestore_client():
     if "gserviceaccount" not in st.secrets:
@@ -26,7 +31,10 @@ def get_custom_survey(survey_id):
         return None
     try:
         doc_ref = db.collection("surveys").document(survey_id)
-        doc = doc_ref.get()
+        doc = doc_ref.get(
+            retry=FIRESTORE_READ_RETRY,
+            timeout=FIRESTORE_TIMEOUT_SECONDS,
+        )
         if doc.exists:
             return doc.to_dict()
     except Exception as e:
@@ -67,7 +75,10 @@ def load_responses_from_firestore():
     if not db:
         return pd.DataFrame()
     try:
-        docs = db.collection("responses").stream()
+        docs = db.collection("responses").stream(
+            retry=FIRESTORE_READ_RETRY,
+            timeout=FIRESTORE_TIMEOUT_SECONDS,
+        )
         records = []
         for doc in docs:
             data = doc.to_dict()
@@ -110,7 +121,10 @@ def get_all_custom_survey_ids():
     if not db:
         return []
     try:
-        docs = db.collection("surveys").select(["survey_id"]).stream()
+        docs = db.collection("surveys").select(["survey_id"]).stream(
+            retry=FIRESTORE_READ_RETRY,
+            timeout=FIRESTORE_TIMEOUT_SECONDS,
+        )
         return [doc.id for doc in docs]
     except Exception as e:
         st.error(f"FirestoreカスタムアンケートID一覧取得エラー: {e}")

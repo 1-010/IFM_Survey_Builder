@@ -118,6 +118,26 @@ st.markdown(
         background-color: #121212 !important;
         color: #FFFFFF !important;
     }
+
+    /* Streamlit applies the theme text color to the inner input element.
+       Keep the actual value, caret, and placeholder readable on our dark UI. */
+    div[data-baseweb="input"] input,
+    div[data-baseweb="textarea"] textarea,
+    div[data-baseweb="select"] input,
+    .stTextInput input,
+    .stTextArea textarea {
+        color: #FFFFFF !important;
+        -webkit-text-fill-color: #FFFFFF !important;
+        caret-color: #FFFFFF !important;
+    }
+    div[data-baseweb="input"] input::placeholder,
+    div[data-baseweb="textarea"] textarea::placeholder,
+    .stTextInput input::placeholder,
+    .stTextArea textarea::placeholder {
+        color: #8C9BA5 !important;
+        -webkit-text-fill-color: #8C9BA5 !important;
+        opacity: 1 !important;
+    }
     
     div.stButton > button[data-testid="stBaseButton-primary"] {
         background-color: #FFFF00 !important;
@@ -234,7 +254,11 @@ def get_gspread_client():
         if "private_key" in creds_dict:
             creds_dict["private_key"] = creds_dict["private_key"].replace("\\n", "\n").replace("\r\n", "\n")
         creds = Credentials.from_service_account_info(creds_dict, scopes=scope)
-        return gspread.authorize(creds)
+        client = gspread.authorize(creds)
+        # gspread otherwise waits indefinitely for its HTTP requests. Keep the
+        # legacy backup path bounded so the live dashboard can recover.
+        client.http_client.timeout = (5, 12)
+        return client
     except:
         return None
 
@@ -293,13 +317,17 @@ def load_responses_from_sheets():
         return pd.DataFrame()
 
 def load_all_responses_merged():
-    df_sheets = load_responses_from_sheets()
+    # Firestore is the canonical source. Query it first so an unavailable
+    # backup spreadsheet cannot block the live dashboard.
     df_firestore = load_responses_from_firestore()
 
-    # Firestore is the canonical source. Sheets is a backup/export surface and
-    # must not be concatenated with the same records for analysis.
     if not df_firestore.empty:
         return dedupe_response_rows(df_firestore)
+
+    # Sheets remains a legacy fallback for data created before Firestore was
+    # enabled. It is never merged with canonical Firestore rows.
+    st.caption("Firestoreに回答がないため、旧Google Sheetsデータを確認しています。")
+    df_sheets = load_responses_from_sheets()
     if "survey_id" not in df_sheets.columns:
         df_sheets["survey_id"] = "default"
     return dedupe_response_rows(df_sheets)
