@@ -9,6 +9,8 @@ from google.oauth2.service_account import Credentials
 import re
 import os
 
+from ifm_guardrails import validate_questions
+
 # Import Firestore helpers
 from db_helper import (
     get_custom_survey,
@@ -24,12 +26,10 @@ IMAGES_DIR = SCRIPT_DIR / "data" / "images"
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
     html, body, [data-testid="stAppViewContainer"] {
         background-color: #000000 !important;
         color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: Arial, system-ui, -apple-system, "Segoe UI", sans-serif !important;
         font-size: 15px;
     }
     
@@ -170,14 +170,6 @@ st.markdown(
     [class*="viewerBadge"] {display: none !important;}
     div[data-testid="stStatusWidget"] {visibility: hidden; display: none !important;}
     
-    @media (min-width: 992px) {
-        div[data-testid="stColumn"]:nth-child(2) {
-            position: -webkit-sticky;
-            position: sticky;
-            top: 20px;
-            z-index: 999;
-        }
-    }
     </style>
     """,
     unsafe_allow_html=True
@@ -197,7 +189,13 @@ def get_civil_questions():
     if survey_id:
         custom_survey = get_custom_survey(survey_id)
         if custom_survey:
-            return pd.DataFrame(custom_survey["questions"]), survey_id, custom_survey.get("client_name")
+            questions = custom_survey.get("questions", [])
+            if validate_questions(questions):
+                st.error("このアンケートの設問定義が壊れているため、回答を開始できません。")
+                st.stop()
+            return pd.DataFrame(questions), survey_id, custom_survey.get("client_name")
+        st.error("指定されたアンケートが見つかりません。URLを確認するか、発行元へお問い合わせください。")
+        st.stop()
             
     if DATA_JSON.exists():
         with open(DATA_JSON, "r", encoding="utf-8") as f:
@@ -233,9 +231,12 @@ def get_worksheet():
         try:
             worksheet = sh.worksheet("成熟度回答")
         except gspread.WorksheetNotFound:
-            worksheet = sh.add_worksheet(title="成熟度回答", rows="100", cols="10")
-            new_headers = ["timestamp", "respondent", "email", "experience_years", "department", "team", "question_id", "phase", "as_is", "to_be"]
+            worksheet = sh.add_worksheet(title="成熟度回答", rows="100", cols="11")
+            new_headers = ["timestamp", "respondent", "email", "experience_years", "department", "team", "question_id", "phase", "as_is", "to_be", "survey_id"]
             worksheet.append_row(new_headers)
+        headers = worksheet.row_values(1)
+        if "survey_id" not in headers:
+            worksheet.update_cell(1, len(headers) + 1, "survey_id")
         return worksheet
     except:
         return None
@@ -249,7 +250,7 @@ def save_response_to_sheets(response_records):
         for r in response_records:
             rows_to_append.append([
                 r["timestamp"], r["respondent"], r["email"], r["experience_years"],
-                r["department"], r["team"], r["question_id"], r["phase"], r["as_is"], r["to_be"]
+                r["department"], r["team"], r["question_id"], r["phase"], r["as_is"], r["to_be"], r["survey_id"]
             ])
         ws.append_rows(rows_to_append)
         return True
@@ -291,8 +292,7 @@ def render_hero_image(qid):
     )
 
 # Brand Header Layout
-stacked_logo_svg = '<svg width="220" height="85" viewBox="0 0 220 85" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(2.4) translate(30, 1)"><path d="M0.538536 22.7316L19.9163 10.678H29.9686C30.2781 10.678 30.5561 10.9259 30.5561 11.2662C30.5561 11.5442 30.4321 11.6681 30.2781 11.7605L20.7598 17.4657C20.1416 17.8368 19.9252 18.579 19.9252 19.1356L19.9155 22.7316H32.0097V1.83296C32.0097 1.4303 31.7002 1.09078 31.2367 1.09078H19.6999L0.369995 13.091V22.7316L0.538536 22.7316Z" fill="white"/></g><text x="110" y="74" fill="white" font-family="\'Inter\', sans-serif" font-size="18" font-weight="900" letter-spacing="4.5" text-anchor="middle">AUTODESK</text></svg>'
-header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #666666; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Maturity Evaluation Platform</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">土木・インフラ CIM適性診断</div></div></div>'
+header_html = '<div style="display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 16px;gap:16px;"><div><div style="font-size:.78rem;color:#D5D5CB;letter-spacing:.12em;text-transform:uppercase;font-weight:600;">IFM Maturity Assessment</div><div style="font-size:1.85rem;font-weight:700;color:#FFFFFF;letter-spacing:-.03em;">土木・インフラ CIM適性診断</div></div><div style="font-size:.8rem;color:#D5D5CB;">for Autodesk Design &amp; Make workflows</div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
@@ -315,8 +315,9 @@ with tabs[0]:
             
             st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
             if st.button("アセスメントを再回答する", type="secondary", use_container_width=True):
-                st.session_state.is_submitted = False
-                st.session_state.current_step = 0
+                for key in list(st.session_state.keys()):
+                    if key.startswith(("asis_", "tobe_", "skip_", "res_")) or key in {"agree_privacy", "agree_privacy_step0", "current_step", "is_submitted"}:
+                        st.session_state.pop(key, None)
                 st.rerun()
 
         elif st.session_state.current_step == 0:
@@ -345,8 +346,8 @@ with tabs[0]:
             
             if not agree_privacy:
                 st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-                st.markdown("<b style='font-size:0.85rem; color:#8C9BA5;'>【確認用：個人情報保護に関する同意文面（法務確認中プレースホルダー）】</b>", unsafe_allow_html=True)
-                privacy_policy_text = "[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。チェックボックスに同意を入れると、この文面エリアは自動的に非表示になり、アセスメント開始ボタンに素早くアクセスできるようになります。]"
+                st.markdown("<b style='font-size:0.85rem; color:#D5D5CB;'>個人情報の利用目的と保存先</b>", unsafe_allow_html=True)
+                privacy_policy_text = "入力された氏名、メールアドレス、所属情報および回答内容は、成熟度分析、結果の連絡、提案内容の改善のために利用し、運用管理者が管理するFirestoreおよびGoogle Sheetsへ保存します。アクセスは担当者とシステム管理者に限定します。保持期間、削除依頼、第三者提供の有無など正式な取扱条件は、発行元が提示する個人情報取扱方針を確認してください。正式な方針が提示されていない場合は回答を開始せず、発行元へお問い合わせください。"
                 st.markdown(
                     f'<div style="background-color:#121212; border:1px solid #333333; border-radius:8px; padding:15px; font-size:0.88rem; color:#8C9BA5; line-height:1.5; white-space:pre-wrap; transition: all 0.2s ease;">{privacy_policy_text}</div>',
                     unsafe_allow_html=True
@@ -366,8 +367,8 @@ with tabs[0]:
                 st.rerun()
                 
         else:
-            # 1から current_step までの設問を下方向に追加しながら描画する
-            for step_idx in range(1, st.session_state.current_step + 1):
+            # Keep the mobile flow compact: render only the current question.
+            for step_idx in [st.session_state.current_step]:
                 q_idx = step_idx - 1
                 row = q_df.iloc[q_idx]
                 qid = row['question_id']
@@ -445,6 +446,9 @@ with tabs[0]:
                 # 「現在フォーカスしている最新の設問」のみ操作ボタンを表示する
                 if step_idx == st.session_state.current_step:
                     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+                    if step_idx > 1 and st.button("前の設問に戻って修正する", type="secondary", use_container_width=True, key=f"back_btn_{qid}"):
+                        st.session_state.current_step -= 1
+                        st.rerun()
                     if step_idx < num_questions:
                         if st.button("回答を確定して次の設問へ", type="primary", use_container_width=True, key=f"next_btn_{qid}"):
                             st.session_state.current_step += 1
@@ -579,7 +583,8 @@ with tabs[0]:
                     "question_id": q_id,
                     "phase": r['phase'],
                     "as_is": as_is_val,
-                    "to_be": to_be_val
+                    "to_be": to_be_val,
+                    "survey_id": active_survey_id
                 })
                 
                 answers_list.append({

@@ -46,6 +46,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 import re
 
+from ifm_guardrails import get_secret_password
+
 # Import Firestore helpers
 from db_helper import (
     get_custom_survey,
@@ -393,7 +395,10 @@ if tab_dashboard:
         
         # 認証（パスワードで二重保護）
         dash_pw = st.text_input("結果分析ダッシュボード閲覧用パスワードを入力してください", type="password", key="dash_pw_input")
-        if dash_pw == "ifm-sales":
+        correct_dash_pw = get_secret_password(st.secrets, "sales_admin")
+        if correct_dash_pw is None:
+            st.error("管理者認証が設定されていません。Secrets の sales_admin.password を設定してください。")
+        elif dash_pw == correct_dash_pw:
             st.success("認証されました。")
             
             # リアルタイムで回答を読み込み（Firestore + Sheets マージ）
@@ -614,7 +619,10 @@ if tab_admin:
         
         # 認証
         admin_pw = st.text_input("管理用パスワードを入力してください", type="password")
-        if admin_pw == "ifm-sales":
+        correct_admin_pw = get_secret_password(st.secrets, "sales_admin")
+        if correct_admin_pw is None:
+            st.error("管理者認証が設定されていません。Secrets の sales_admin.password を設定してください。")
+        elif admin_pw == correct_admin_pw:
             st.success("認証されました。")
             
             # 1. 基本情報入力

@@ -3,25 +3,22 @@ import pandas as pd
 from datetime import datetime
 import re
 
+from ifm_guardrails import get_secret_password
+
 # Import Firestore helpers
 from db_helper import (
     get_firestore_client,
     get_all_custom_survey_ids
 )
 
-# Page configuration for Autodesk Brand Look
-st.set_page_config(page_title="Autodesk Platform - Super Admin Panel", layout="wide")
-
 # Theme setup (Autodesk Black/Yellow)
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
     html, body, [data-testid="stAppViewContainer"] {
         background-color: #000000 !important;
         color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: Arial, system-ui, -apple-system, "Segoe UI", sans-serif !important;
         font-size: 15px;
     }
     
@@ -78,18 +75,19 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Header
-stacked_logo_svg = '<svg width="220" height="85" viewBox="0 0 220 85" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(2.4) translate(30, 1)"><path d="M0.538536 22.7316L19.9163 10.678H29.9686C30.2781 10.678 30.5561 10.9259 30.5561 11.2662C30.5561 11.5442 30.4321 11.6681 30.2781 11.7605L20.7598 17.4657C20.1416 17.8368 19.9252 18.579 19.9252 19.1356L19.9155 22.7316H32.0097V1.83296C32.0097 1.4303 31.7002 1.09078 31.2367 1.09078H19.6999L0.369995 13.091V22.7316L0.538536 22.7316Z" fill="white"/></g><text x="110" y="74" fill="white" font-family="\'Inter\', sans-serif" font-size="18" font-weight="900" letter-spacing="4.5" text-anchor="middle">AUTODESK</text></svg>'
-header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #FF5252; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Database Maintenance Portal</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">超管理者用システムメンテナンス</div></div></div>'
+# The IFM service identity stays primary; Autodesk is referenced descriptively.
+header_html = '<div style="display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 16px;gap:16px;"><div><div style="font-size:.78rem;color:#FF8A80;letter-spacing:.12em;text-transform:uppercase;font-weight:600;">IFM Database Maintenance</div><div style="font-size:1.85rem;font-weight:700;color:#FFFFFF;letter-spacing:-.03em;">超管理者用システムメンテナンス</div></div><div style="font-size:.8rem;color:#D5D5CB;">for Autodesk Design &amp; Make workflows</div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
 # Authentication
 super_pw = st.text_input("超管理者専用パスワードを入力してください", type="password", key="super_admin_pw_input")
 
-correct_pw = st.secrets.get("super_admin", {}).get("password", "ifm-super-admin-root")
+correct_pw = get_secret_password(st.secrets, "super_admin")
 
-if super_pw == correct_pw:
+if correct_pw is None:
+    st.error("超管理者認証が設定されていません。Secrets の super_admin.password を設定してください。")
+elif super_pw == correct_pw:
     st.success("認証完了。メンテナンスメニューが利用可能です。")
     db = get_firestore_client()
     
@@ -142,9 +140,18 @@ if super_pw == correct_pw:
                         )
                     with col_del:
                         st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
-                        if st.button(f"削除: {s['survey_id']}", key=f"del_survey_{s['survey_id']}"):
-                            # 削除確認処理
+                        pending_key = f"confirm_survey_{s['survey_id']}"
+                        if st.session_state.get(pending_key):
+                            st.warning("もう一度押すと完全に削除します。")
+                        if st.button(
+                            f"{'完全削除を確定' if st.session_state.get(pending_key) else '削除を確認'}: {s['survey_id']}",
+                            key=f"del_survey_{s['survey_id']}",
+                        ):
+                            if not st.session_state.get(pending_key):
+                                st.session_state[pending_key] = True
+                                st.rerun()
                             db.collection("surveys").document(s['survey_id']).delete()
+                            st.session_state.pop(pending_key, None)
                             st.success(f"ID: `{s['survey_id']}` を削除しました。画面を再読み込みしてください。")
                             st.rerun()
                         st.markdown("</div>", unsafe_allow_html=True)
@@ -192,7 +199,16 @@ if super_pw == correct_pw:
                 
                 # 削除ボタン
                 st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
-                confirm_del_btn = st.button(f" アンケートID '{target_del_sid}' のすべての回答データを一括削除する", key="btn_bulk_delete_responses")
+                confirm_phrase = st.text_input(
+                    "確認のためアンケートIDを入力してください",
+                    key="bulk_delete_confirmation",
+                )
+                target_count = int((resp_df['survey_id'] == target_del_sid).sum())
+                confirm_del_btn = st.button(
+                    f"アンケートID '{target_del_sid}' の回答 {target_count} 件を完全削除する",
+                    key="btn_bulk_delete_responses",
+                    disabled=confirm_phrase != target_del_sid,
+                )
                 if confirm_del_btn:
                     # Firestoreクエリで該当ドキュメントを抽出して削除
                     docs_to_delete = db.collection("responses").where("survey_id", "==", target_del_sid).stream()
@@ -257,7 +273,7 @@ if super_pw == correct_pw:
             "PE04": {
                 "dept": "生産技術",
                 "phase": "建設",
-                "title": "PE04 (建設): 設備の導入や建設段階 of 進捗管理におけるデータ活用",
+                "title": "PE04 (建設): 設備の導入や建設段階の進捗管理におけるデータ活用",
                 "products": "Autodesk Construction Cloud (ACC) / Build, Navisworks (4D)",
                 "value_pitch": "現場設備導入の進捗と計画のデジタル管理、4D施工シミュレーションによる現場干渉と作業順序の可視化・最適化。",
                 "sales_hint": "施工段階の情報分断があるL2-L3にはACCによるチェックリスト管理、L4以上には4D連動施工計画を提案して現場手戻りを防止。"
