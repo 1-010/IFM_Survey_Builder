@@ -8,6 +8,10 @@ import gspread
 from google.oauth2.service_account import Credentials
 import re
 import os
+import html
+from io import BytesIO
+
+from ifm_guardrails import dedupe_response_rows, get_secret_password, validate_questions
 
 # Import Firestore helpers
 from db_helper import (
@@ -43,7 +47,14 @@ def get_default_questions():
     if survey_id:
         custom_survey = get_custom_survey(survey_id)
         if custom_survey:
-            return pd.DataFrame(custom_survey["questions"]), survey_id, custom_survey.get("client_name")
+            questions = custom_survey.get("questions", [])
+            errors = validate_questions(questions)
+            if errors:
+                st.error("このアンケートの設問定義が壊れているため、回答を開始できません。管理者へお問い合わせください。")
+                st.stop()
+            return pd.DataFrame(questions), survey_id, custom_survey.get("client_name")
+        st.error("指定されたアンケートが見つかりません。URLを確認するか、発行元へお問い合わせください。")
+        st.stop()
             
     all_qs = load_all_questions_json()
     return pd.DataFrame(all_qs.get("questions", [])), "default", None
@@ -54,12 +65,10 @@ q_df, active_survey_id, client_name = get_default_questions()
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
     html, body, [data-testid="stAppViewContainer"] {
         background-color: #000000 !important;
         color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: Arial, system-ui, -apple-system, "Segoe UI", sans-serif !important;
         font-size: 15px;
     }
     
@@ -210,14 +219,6 @@ st.markdown(
     [class*="viewerBadge"] {display: none !important;}
     div[data-testid="stStatusWidget"] {visibility: hidden; display: none !important;}
     
-    @media (min-width: 992px) {
-        div[data-testid="stColumn"]:nth-child(2) {
-            position: -webkit-sticky;
-            position: sticky;
-            top: 20px;
-            z-index: 999;
-        }
-    }
     </style>
     """,
     unsafe_allow_html=True
@@ -249,9 +250,12 @@ def get_worksheet():
         try:
             worksheet = sh.worksheet("成熟度回答")
         except gspread.WorksheetNotFound:
-            worksheet = sh.add_worksheet(title="成熟度回答", rows="100", cols="10")
-            new_headers = ["timestamp", "respondent", "email", "experience_years", "department", "team", "question_id", "phase", "as_is", "to_be"]
+            worksheet = sh.add_worksheet(title="成熟度回答", rows="100", cols="11")
+            new_headers = ["timestamp", "respondent", "email", "experience_years", "department", "team", "question_id", "phase", "as_is", "to_be", "survey_id"]
             worksheet.append_row(new_headers)
+        headers = worksheet.row_values(1)
+        if "survey_id" not in headers:
+            worksheet.update_cell(1, len(headers) + 1, "survey_id")
         return worksheet
     except:
         return None
@@ -265,7 +269,7 @@ def save_response_to_sheets(response_records):
         for r in response_records:
             rows_to_append.append([
                 r["timestamp"], r["respondent"], r["email"], r["experience_years"],
-                r["department"], r["team"], r["question_id"], r["phase"], r["as_is"], r["to_be"]
+                r["department"], r["team"], r["question_id"], r["phase"], r["as_is"], r["to_be"], r["survey_id"]
             ])
         ws.append_rows(rows_to_append)
         return True
@@ -291,23 +295,14 @@ def load_responses_from_sheets():
 def load_all_responses_merged():
     df_sheets = load_responses_from_sheets()
     df_firestore = load_responses_from_firestore()
-    
-    if df_sheets.empty:
-        return df_firestore
-    if df_firestore.empty:
-        if "survey_id" not in df_sheets.columns:
-            df_sheets["survey_id"] = "default"
-        return df_sheets
-        
+
+    # Firestore is the canonical source. Sheets is a backup/export surface and
+    # must not be concatenated with the same records for analysis.
+    if not df_firestore.empty:
+        return dedupe_response_rows(df_firestore)
     if "survey_id" not in df_sheets.columns:
         df_sheets["survey_id"] = "default"
-        
-    df_sheets["as_is"] = pd.to_numeric(df_sheets["as_is"], errors='coerce')
-    df_sheets["to_be"] = pd.to_numeric(df_sheets["to_be"], errors='coerce')
-    df_firestore["as_is"] = pd.to_numeric(df_firestore["as_is"], errors='coerce')
-    df_firestore["to_be"] = pd.to_numeric(df_firestore["to_be"], errors='coerce')
-    
-    return pd.concat([df_sheets, df_firestore], ignore_index=True)
+    return dedupe_response_rows(df_sheets)
 
 def is_valid_email(email):
     return re.match(r'^[\w\.-]+@[\w\.-]+\.\w+$', email.strip()) is not None
@@ -321,10 +316,12 @@ IMAGE_MAPPING = {
     "FI02": "brand-image-prototype-1-dark.webp",
     "FI03": "Construction-CCEED-China-0644_with_overlay.webp",
     "FI04": "fy27-water-image-02.webp",
+    "FI05": "Ops analytics_Overlay-people collaborating.webp",
     "PE01": "fy27-dm-digital-factory-campaign-visual-01.webp",
     "PE02": "fy27-dm-fusion-industry-cloud-imagery.webp",
     "PE03": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp",
     "PE04": "brand-image-prototype-4-dark.webp",
+    "PE05": "Ops analytics_Overlay_people in field.webp",
     "FC01": "fy27-aec-forma-industry-cloud-imagery.webp",
     "FC02": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp",
     "FC03": "brand-image-prototype-1-dark.webp",
@@ -351,19 +348,22 @@ def render_hero_image(qid):
         unsafe_allow_html=True
     )
 
-# Brand Header Layout
-stacked_logo_svg = '<svg width="220" height="85" viewBox="0 0 220 85" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(2.4) translate(30, 1)"><path d="M0.538536 22.7316L19.9163 10.678H29.9686C30.2781 10.678 30.5561 10.9259 30.5561 11.2662C30.5561 11.5442 30.4321 11.6681 30.2781 11.7605L20.7598 17.4657C20.1416 17.8368 19.9252 18.579 19.9252 19.1356L19.9155 22.7316H32.0097V1.83296C32.0097 1.4303 31.7002 1.09078 31.2367 1.09078H19.6999L0.369995 13.091V22.7316L0.538536 22.7316Z" fill="white"/></g><text x="110" y="74" fill="white" font-family="\'Inter\', sans-serif" font-size="18" font-weight="900" letter-spacing="4.5" text-anchor="middle">AUTODESK</text></svg>'
-header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #666666; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Maturity Evaluation Platform</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">設備管理成熟度アセスメント (改修テスト版)</div></div></div>'
+# Brand header: the service name is primary; Autodesk is used descriptively.
+header_html = '<div style="display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 16px;gap:16px;"><div><div style="font-size:.78rem;color:#D5D5CB;letter-spacing:.12em;text-transform:uppercase;font-weight:600;">IFM Maturity Assessment</div><div style="font-size:1.85rem;font-weight:700;color:#FFFFFF;letter-spacing:-.03em;">設備管理成熟度アセスメント</div></div><div style="font-size:.8rem;color:#D5D5CB;">for Autodesk Design &amp; Make workflows</div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
 # Client navigation view switcher
 is_client_access = False
+requested_tab = ""
 try:
     is_client_access = "survey_id" in st.query_params
+    requested_tab = str(st.query_params.get("tab", "")).lower()
 except AttributeError:
     try:
-        is_client_access = "survey_id" in st.experimental_get_query_params()
+        legacy_params = st.experimental_get_query_params()
+        is_client_access = "survey_id" in legacy_params
+        requested_tab = str(legacy_params.get("tab", [""])[0]).lower()
     except:
         pass
 
@@ -373,13 +373,17 @@ if is_client_access:
     tab_dashboard = None
     tab_admin = None
 else:
-    tabs = st.tabs(["アセスメント回答", "結果分析", "営業管理"])
-    tab_input = tabs[0]
-    tab_dashboard = tabs[1]
-    tab_admin = tabs[2]
+    if requested_tab == "dashboard":
+        tab_dashboard, tab_input, tab_admin = st.tabs(["結果分析", "アセスメント回答", "営業管理"])
+    elif requested_tab == "admin":
+        tab_admin, tab_input, tab_dashboard = st.tabs(["営業管理", "アセスメント回答", "結果分析"])
+    else:
+        tab_input, tab_dashboard, tab_admin = st.tabs(["アセスメント回答", "結果分析", "営業管理"])
 
 ###  Tab 1: 回答入力フォーム ###
 with tab_input:
+    if client_name:
+        st.info(f"{client_name} 向けアセスメント · アンケートID: {active_survey_id}")
     col_left_form, col_right_chart = st.columns([11, 9])
     
     if "current_step" not in st.session_state:
@@ -397,8 +401,9 @@ with tab_input:
             
             st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
             if st.button("アセスメントを再回答する", type="secondary", use_container_width=True):
-                st.session_state.is_submitted = False
-                st.session_state.current_step = 0
+                for key in list(st.session_state.keys()):
+                    if key.startswith(("asis_", "tobe_", "skip_", "res_")) or key in {"agree_privacy", "agree_privacy_step0", "current_step", "is_submitted"}:
+                        st.session_state.pop(key, None)
                 st.rerun()
 
         elif st.session_state.current_step == 0:
@@ -427,8 +432,8 @@ with tab_input:
             
             if not agree_privacy:
                 st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-                st.markdown("<b style='font-size:0.85rem; color:#8C9BA5;'>【確認用：個人情報保護に関する同意文面（法務確認中プレースホルダー）】</b>", unsafe_allow_html=True)
-                privacy_policy_text = "[法務確認済みの個人情報保護方針に関する詳細な同意文面がここに入ります。チェックボックスに同意を入れると、この文面エリアは自動的に非表示になり、アセスメント開始ボタンに素早くアクセスできるようになります。]"
+                st.markdown("<b style='font-size:0.85rem; color:#D5D5CB;'>個人情報の利用目的と保存先</b>", unsafe_allow_html=True)
+                privacy_policy_text = "入力された氏名、メールアドレス、所属情報および回答内容は、成熟度分析、結果の連絡、提案内容の改善のために利用し、運用管理者が管理するFirestoreおよびGoogle Sheetsへ保存します。アクセスは担当者とシステム管理者に限定します。保持期間、削除依頼、第三者提供の有無など正式な取扱条件は、発行元が提示する個人情報取扱方針を確認してください。正式な方針が提示されていない場合は回答を開始せず、発行元へお問い合わせください。"
                 st.markdown(
                     f'<div style="background-color:#121212; border:1px solid #333333; border-radius:8px; padding:15px; font-size:0.88rem; color:#8C9BA5; line-height:1.5; white-space:pre-wrap; transition: all 0.2s ease;">{privacy_policy_text}</div>',
                     unsafe_allow_html=True
@@ -448,8 +453,8 @@ with tab_input:
                 st.rerun()
                 
         else:
-            # 1から current_step までの設問を下方向に追加しながら描画する
-            for step_idx in range(1, st.session_state.current_step + 1):
+            # Keep the mobile flow compact: render only the current question.
+            for step_idx in [st.session_state.current_step]:
                 q_idx = step_idx - 1
                 row = q_df.iloc[q_idx]
                 qid = row['question_id']
@@ -457,9 +462,9 @@ with tab_input:
                 st.markdown(
                     f"<div style='background-color:#121212; padding:15px; border-left:4px solid #FFFF00; margin-top:20px; border-top:1px solid #333333; border-right:1px solid #333333; border-bottom:1px solid #333333;'>"
                     f"<div style='font-size:0.8rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
-                    f"{row['department']} 領域  ·  設問 {step_idx} / {num_questions}</div>"
-                    f"<h4 style='margin-top:4px; margin-bottom:6px; font-size:1.2rem; font-weight:700; color:#FFFFFF;'>{row['question_id']} ({row['phase']})</h4>"
-                    f"<div style='font-size:0.92rem; line-height:1.45; color:#FFFFFF;'>{row['question_text']}</div>"
+                    f"{html.escape(str(row['department']))} 領域  ·  設問 {step_idx} / {num_questions}</div>"
+                    f"<h4 style='margin-top:4px; margin-bottom:6px; font-size:1.2rem; font-weight:700; color:#FFFFFF;'>{html.escape(str(row['question_id']))} ({html.escape(str(row['phase']))})</h4>"
+                    f"<div style='font-size:0.92rem; line-height:1.45; color:#FFFFFF;'>{html.escape(str(row['question_text']))}</div>"
                     f"</div>",
                     unsafe_allow_html=True
                 )
@@ -527,6 +532,9 @@ with tab_input:
                 # 「現在フォーカスしている最新の設問」のみ操作ボタンを表示する
                 if step_idx == st.session_state.current_step:
                     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
+                    if step_idx > 1 and st.button("前の設問に戻って修正する", type="secondary", use_container_width=True, key=f"back_btn_{qid}"):
+                        st.session_state.current_step -= 1
+                        st.rerun()
                     if step_idx < num_questions:
                         if st.button("回答を確定して次の設問へ", type="primary", use_container_width=True, key=f"next_btn_{qid}"):
                             st.session_state.current_step += 1
@@ -661,7 +669,8 @@ with tab_input:
                     "question_id": q_id,
                     "phase": r['phase'],
                     "as_is": as_is_val,
-                    "to_be": to_be_val
+                    "to_be": to_be_val,
+                    "survey_id": active_survey_id
                 })
                 
                 answers_list.append({
@@ -708,8 +717,10 @@ if tab_dashboard:
     with tab_dashboard:
         st.header("成熟度アセスメントの分析・比較")
         dash_pw = st.text_input("結果分析ダッシュボード閲覧用パスワード", type="password", key="dash_pw_input")
-        correct_dash_pw = st.secrets.get("sales_admin", {}).get("password", "ifm-sales")
-        if dash_pw == correct_dash_pw:
+        correct_dash_pw = get_secret_password(st.secrets, "sales_admin")
+        if correct_dash_pw is None:
+            st.error("管理者認証が設定されていません。Secrets の sales_admin.password を設定してください。")
+        elif dash_pw == correct_dash_pw:
             st.success("認証されました。")
             resp_df_raw = load_all_responses_merged()
             
@@ -1157,8 +1168,10 @@ if tab_admin:
         st.header("営業担当用 カスタムアンケート発行管理")
         admin_pw = st.text_input("管理用パスワード", type="password", key="admin_pw_input")
         
-        correct_admin_pw = st.secrets.get("sales_admin", {}).get("password", "ifm-sales")
-        if admin_pw == correct_admin_pw:
+        correct_admin_pw = get_secret_password(st.secrets, "sales_admin")
+        if correct_admin_pw is None:
+            st.error("管理者認証が設定されていません。Secrets の sales_admin.password を設定してください。")
+        elif admin_pw == correct_admin_pw:
             st.success("認証されました。")
             
             st.subheader("1. アンケート基本設定")
@@ -1252,9 +1265,15 @@ if tab_admin:
                         st.info("顧客配信用リンク (本番環境):")
                         st.code(prod_url, language=None)
                         
-                        # スマホですぐスキャンしてアクセスできるようにQRコードを表示
-                        qr_prod_url = f"https://api.qrserver.com/v1/create-qr-code/?size=180x180&data={prod_url}"
-                        st.image(qr_prod_url, caption="スマホ用顧客配信用QRコード (本番環境)", width=180)
+                        # Generate locally so customer URLs are never sent to a third-party QR service.
+                        try:
+                            import qrcode
+
+                            qr_buffer = BytesIO()
+                            qrcode.make(prod_url).save(qr_buffer, format="PNG")
+                            st.image(qr_buffer.getvalue(), caption="スマホ用顧客配信用QRコード（本番環境）", width=180)
+                        except ImportError:
+                            st.caption("QRコード生成機能は現在利用できません。上記URLをコピーして共有してください。")
                         
                         st.info("テスト用リンク (ローカル環境):")
                         st.code(local_url, language=None)
@@ -1321,8 +1340,8 @@ if tab_admin:
                         recommendations_map = {
                             "FC01": "Formaによる敷地風向・日影解析デモをオファーし、『初期計画段階でのAI迅速シミュレーションによる手戻り削減』をフックにアプローチしてください。",
                             "FC02": "FlexSimによる工程シミュレーションデモを提案。『時間軸を考慮した設備能力と搬送ルートの最適化』をアピールして、工場部門への商談を開始してください。",
-                            "FC03": "Factory Design Utilities (FDU) を紹介。『AutoCADとInventor of 2D/3D双方向同期による干渉チェック』が最も響くアプローチです。",
-                            "FC04": "AIモデリング（Navastoなど）やジェネレーティブデザイン of 紹介スライドを持参し、設計プロセスの自律化を切り口に会話を展開してください。",
+                            "FC03": "Factory Design Utilities (FDU) を紹介。『AutoCADとInventorの2D/3D双方向同期による干渉チェック』が最も響くアプローチです。",
+                            "FC04": "AIモデリング（Navastoなど）やジェネレーティブデザインの紹介スライドを持参し、設計プロセスの自律化を切り口に会話を展開してください。",
                             "FC05": "AutoCAD専用ツールセットやAPI/LISPによる作図・BOM出力の『定型業務自動化』をフックにし、開発期間の圧縮を提案してください。",
                             "FC06": "Autodesk Construction Cloud (ACC) CDEによる『サプライヤとの安全なリアルタイム3Dモデル共有・整合性維持』をテーマに会話を構築してください。",
                             "FC07": "FlexSim VRを用いた『バーチャル工場内覧会・VR役員合意形成』のデモを提案し、意思決定の迅速化を支援してください。",
@@ -1330,7 +1349,7 @@ if tab_admin:
                             "AE01": "Autodesk Formaを用いた環境シミュレーションを提案。初期段階で騒音や日影の風向問題を秒速で解決する事例が刺さります。",
                             "AE02": "Revitの3D BIM設計への移行支援プログラムをオファー。2Dから3Dへの移行に伴う図面の一貫性確保が最大のセールスポイントです。",
                             "AE03": "Navisworksによる複数領域データの重ね合わせ・自動干渉検出のデモを提案し、現場施工段階の手戻り削減効果を訴求してください。",
-                            "AE04": "ACC Docs/Design CollaborateによるISO 19650準拠 of クラウドCDEコラボレーションの価値、データ紛失防止を提案してください。",
+                            "AE04": "ACC Docs/Design CollaborateによるISO 19650準拠のクラウドCDEコラボレーションの価値、データ紛失防止を提案してください。",
                             "AE05": "ACC Takeoffを用いた3D/2D統合数量算出による見積の高速化・高精度化のソリューション資料をオファーしてください。",
                             "AE06": "ACC Buildを用いた現場デジタル施工管理（モバイルでの図面閲覧や指摘管理）を提案し、現場監督の直行直帰促進をアピールしてください。",
                             "AE07": "Navisworks 4D工程シミュレーションにより、工期遅延リスクを3Dビジュアルで事前に洗い出す検証デモをオファーしてください。",

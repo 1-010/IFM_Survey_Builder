@@ -1,19 +1,15 @@
 import streamlit as st
 from datetime import datetime
-
-# Page configuration for Autodesk Brand Look
-st.set_page_config(page_title="Autodesk Platform - IFM Survey Console Portal", layout="wide")
+from pathlib import Path
 
 # Theme setup (Autodesk Black/Yellow)
 st.markdown(
     """
     <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-    
     html, body, [data-testid="stAppViewContainer"] {
         background-color: #000000 !important;
         color: #FFFFFF !important;
-        font-family: 'Inter', sans-serif !important;
+        font-family: Arial, system-ui, -apple-system, "Segoe UI", sans-serif !important;
         font-size: 15px;
     }
     
@@ -65,9 +61,8 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Header
-stacked_logo_svg = '<svg width="220" height="85" viewBox="0 0 220 85" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(2.4) translate(30, 1)"><path d="M0.538536 22.7316L19.9163 10.678H29.9686C30.2781 10.678 30.5561 10.9259 30.5561 11.2662C30.5561 11.5442 30.4321 11.6681 30.2781 11.7605L20.7598 17.4657C20.1416 17.8368 19.9252 18.579 19.9252 19.1356L19.9155 22.7316H32.0097V1.83296C32.0097 1.4303 31.7002 1.09078 31.2367 1.09078H19.6999L0.369995 13.091V22.7316L0.538536 22.7316Z" fill="white"/></g><text x="110" y="74" fill="white" font-family="\'Inter\', sans-serif" font-size="18" font-weight="900" letter-spacing="4.5" text-anchor="middle">AUTODESK</text></svg>'
-header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #FFFF00; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Informed Design & Factory Management</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">IFM 総合案内コンソール</div></div></div>'
+# Service identity remains primary; Autodesk is referenced descriptively.
+header_html = '<div style="display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 16px;gap:16px;"><div><div style="font-size:.78rem;color:#FFFF00;letter-spacing:.12em;text-transform:uppercase;font-weight:600;">Informed Design &amp; Factory Management</div><div style="font-size:1.95rem;font-weight:700;color:#FFFFFF;letter-spacing:-.03em;">IFM 総合案内コンソール</div></div><div style="font-size:.8rem;color:#D5D5CB;">for Autodesk Design &amp; Make workflows</div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
@@ -98,7 +93,7 @@ with col_main:
         <div class="card">
             <h4> 設備管理成熟度アセスメント回答画面 (Client Facing)</h4>
             <p>顧客企業の担当者が実際に10の設問に回答し、As-Is / To-Be を選択する公開用フォームです。</p>
-            <a href="/?brand=autodesk" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 回答画面を開く (既定デフォルトID)</a>
+            <a href="/?brand=autodesk" style="color:#FFFF00; font-weight:600; text-decoration:none;">回答画面を開く（デモ・既定設問）</a>
         </div>
         """,
         unsafe_allow_html=True
@@ -110,7 +105,7 @@ with col_main:
         <div class="card">
             <h4> 営業担当用 カスタムアンケート発行管理 (Sales Console)</h4>
             <p>特定の顧客企業（例: トヨタ自動車様）専用のアンケートIDを発行し、設問セット（工場設計 / 建築BIM 等）をカスタマイズする管理機能です。</p>
-            <a href="/?brand=autodesk&tab=admin" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 営業管理画面へ遷移する</a>
+            <a href="/?brand=autodesk&tab=admin" style="color:#FFFF00; font-weight:600; text-decoration:none;">営業管理画面へ移動する</a>
             <span style="font-size:0.8rem; color:#888888; margin-left:15px;">※要パスワード。紛失時は試作管理者に確認してください。</span>
         </div>
         """,
@@ -123,7 +118,7 @@ with col_main:
         <div class="card">
             <h4> 成熟度アセスメント 結果分析ダッシュボード (Maturity Dashboard)</h4>
             <p>送信された回答データを部門別・役職別に集計し、現場層と意思決定層の『認識乖離（Gap）』や、最大課題に対する『AI推奨セールストーク』を出力します。</p>
-            <a href="/?brand=autodesk&tab=dashboard" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 分析ダッシュボードを開く</a>
+            <a href="/?brand=autodesk&tab=dashboard" style="color:#FFFF00; font-weight:600; text-decoration:none;">分析ダッシュボードへ移動する</a>
             <span style="font-size:0.8rem; color:#888888; margin-left:15px;">※要パスワード。紛失時は試作管理者に確認してください。</span>
         </div>
         """,
@@ -136,7 +131,7 @@ with col_main:
         <div class="card">
             <h4> 超管理者用システムメンテナンス ＆ 製品紐付け (Super Admin Console)</h4>
             <p>DBデータのクレンジング（削除）、および各設問がどのAutodesk製品の提案シナリオに結びついているかの「Autodesk製品提案マッピング」を閲覧できます。</p>
-            <a href="/?brand=autodesk&app=super_admin" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 超管理者コンソールを開く</a>
+            <a href="/?brand=autodesk&app=super_admin" style="color:#FFFF00; font-weight:600; text-decoration:none;">超管理者コンソールへ移動する</a>
             <span style="font-size:0.8rem; color:#888888; margin-left:15px;">※要パスワード。紛失時は試作管理者に確認してください。</span>
         </div>
         """,
@@ -144,6 +139,10 @@ with col_main:
     )
 
 with col_sidebar:
+    hero_path = Path(__file__).resolve().parent / "data" / "images" / "brand-image-prototype-1-dark.webp"
+    if hero_path.exists():
+        st.image(str(hero_path), caption="設計・製造データをつなぐIFMアセスメント", use_container_width=True)
+
     # 3. 使い方フロー (Workflow)
     st.markdown("###  標準運用フロー")
     st.markdown(
@@ -164,7 +163,7 @@ with col_sidebar:
     )
     
     st.markdown("---")
-    
+
     # 4. 問い合わせ導線とパスワードポリシー
     st.markdown("###  問い合わせ ＆ 認証について")
     st.info(
@@ -183,3 +182,5 @@ with col_sidebar:
         st.write("Google Cloud Firestore に安全に格納され、同時に指定の営業管理用 Google Sheets にもリアルタイム転送されます。")
     with st.expander("Q. 顧客が回答中にエラーが出ると言った場合は？"):
         st.write("メールアドレスの形式チェック（半角英数字、@記号の有無）および個人情報保護方針への同意チェックが正しく入力されているか確認してください。")
+
+st.caption("IFM Maturity Assessmentは独立した試作サービスです。AutodeskおよびAutodesk製品名は識別目的で使用しています。本サービスがAutodeskにより承認・後援されていることを示すものではありません。AutodeskはAutodesk, Inc.の商標です。")
