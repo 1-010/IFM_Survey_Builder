@@ -83,6 +83,7 @@ PAGES = [
     "Heatmap",
     "Metrics detail",
     "Approvals & tasks",
+    "🔋 Agent Limits & Usage",
     "Insights (passive)",
     "Provenance (passive)",
 ]
@@ -770,6 +771,10 @@ elif page == "Provenance (passive)":
         "- `Bias Declaration` blocks in `capabilities/*_capability_manifest.md`\n\n"
         "Activate when there is a concrete provenance dispute the team needs to resolve."
     )
+
+elif page == "🔋 Agent Limits & Usage":
+    from agent_usage_page import render_page
+    render_page()
 
 st.divider()
 st.caption(

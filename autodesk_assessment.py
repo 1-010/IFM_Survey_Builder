@@ -353,7 +353,7 @@ def render_hero_image(qid):
 
 # Brand Header Layout
 stacked_logo_svg = '<svg width="220" height="85" viewBox="0 0 220 85" fill="none" xmlns="http://www.w3.org/2000/svg"><g transform="scale(2.4) translate(30, 1)"><path d="M0.538536 22.7316L19.9163 10.678H29.9686C30.2781 10.678 30.5561 10.9259 30.5561 11.2662C30.5561 11.5442 30.4321 11.6681 30.2781 11.7605L20.7598 17.4657C20.1416 17.8368 19.9252 18.579 19.9252 19.1356L19.9155 22.7316H32.0097V1.83296C32.0097 1.4303 31.7002 1.09078 31.2367 1.09078H19.6999L0.369995 13.091V22.7316L0.538536 22.7316Z" fill="white"/></g><text x="110" y="74" fill="white" font-family="\'Inter\', sans-serif" font-size="18" font-weight="900" letter-spacing="4.5" text-anchor="middle">AUTODESK</text></svg>'
-header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #666666; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Maturity Evaluation Platform</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">設備管理成熟度アセスメント</div></div></div>'
+header_html = f'<div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 10px; margin-bottom: 10px; gap: 20px;"><div style="width: 220px; display: flex; align-items: center;">{stacked_logo_svg}</div><div style="text-align: right; min-width: 250px;"><div style="font-size: 0.75rem; color: #666666; letter-spacing: 0.15em; text-transform: uppercase; font-weight: 600; margin-bottom: 2px;">Maturity Evaluation Platform</div><div style="font-size: 1.7rem; font-weight: 700; color: #FFFFFF; letter-spacing: -0.03em;">設備管理成熟度アセスメント (改修テスト版)</div></div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
@@ -708,8 +708,8 @@ if tab_dashboard:
     with tab_dashboard:
         st.header("成熟度アセスメントの分析・比較")
         dash_pw = st.text_input("結果分析ダッシュボード閲覧用パスワード", type="password", key="dash_pw_input")
-        
-        if dash_pw == "ifm-sales":
+        correct_dash_pw = st.secrets.get("sales_admin", {}).get("password", "ifm-sales")
+        if dash_pw == correct_dash_pw:
             st.success("認証されました。")
             resp_df_raw = load_all_responses_merged()
             
@@ -1067,7 +1067,8 @@ if tab_admin:
         st.header("営業担当用 カスタムアンケート発行管理")
         admin_pw = st.text_input("管理用パスワード", type="password", key="admin_pw_input")
         
-        if admin_pw == "ifm-sales":
+        correct_admin_pw = st.secrets.get("sales_admin", {}).get("password", "ifm-sales")
+        if admin_pw == correct_admin_pw:
             st.success("認証されました。")
             
             st.subheader("1. アンケート基本設定")

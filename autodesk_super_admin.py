@@ -87,7 +87,9 @@ st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px
 # Authentication
 super_pw = st.text_input("超管理者専用パスワードを入力してください", type="password", key="super_admin_pw_input")
 
-if super_pw == "ifm-super-admin-root":
+correct_pw = st.secrets.get("super_admin", {}).get("password", "ifm-super-admin-root")
+
+if super_pw == correct_pw:
     st.success("認証完了。メンテナンスメニューが利用可能です。")
     db = get_firestore_client()
     
@@ -95,7 +97,7 @@ if super_pw == "ifm-super-admin-root":
         st.error("データベースへの接続が確立できません。")
         st.stop()
         
-    tabs = st.tabs(["📁 アンケートID管理", "📝 回答データ一括クレンジング", "📊 システムステータス"])
+    tabs = st.tabs(["📁 アンケートID管理", "📝 回答データ一括クレンジング", "💡 設問-プロダクト紐付け（種明かし）", "📊 システムステータス"])
     
     # --- Tab 1: アンケートID管理 ---
     with tabs[0]:
@@ -221,8 +223,125 @@ if super_pw == "ifm-super-admin-root":
         except Exception as e:
             st.error(f"回答データ一覧取得エラー: {e}")
             
-    # --- Tab 3: システムステータス ---
+    # --- Tab 3: 設問-プロダクト紐付け（種明かし） ---
     with tabs[2]:
+        st.subheader("💡 アンケート設問とAutodeskプロダクトの関連性（営業用種明かし）")
+        st.write("各アセスメント設問が「どのAutodesk製品の提案や価値訴求に結びつくか」を整理したセールスチートシートです。顧客のスコア（As-Is/To-Be）に応じて提案アプローチを決定するための判断基準としてご利用ください。")
+        
+        # Mapping definition
+        product_mapping = {
+            "PE01": {
+                "dept": "生産技術",
+                "phase": "計画",
+                "title": "PE01 (計画): 生産・工程計画やレイアウト設備検討におけるデータ活用",
+                "products": "Factory Design Utilities (FDU), AutoCAD Architecture, Inventor",
+                "value_pitch": "2D-3D双方向同期レイアウト設計による手戻り防止。2Dでの簡易配置が3Dへ即座に反映され、設備干渉の早期発見が可能。",
+                "sales_hint": "L1-L2レベル（2D中心）の顧客には、FDUを用いた2D-3Dレイアウト同期と、標準アセットライブラリによる配置設計の高速化を提案。"
+            },
+            "PE02": {
+                "dept": "生産技術",
+                "phase": "設計",
+                "title": "PE02 (設計): 設備やラインの設計プロセスにおけるデータ活用",
+                "products": "Autodesk Inventor, iLogic, Informed Design",
+                "value_pitch": "パラメータ駆動設計とモデリングルールの標準化。Informed Designにより製造可能な設計条件をパラメータとしてロックし、Revitへ出力可能。",
+                "sales_hint": "L2-L3の顧客には、iLogicによる定型モデリングの自動化、およびInformed Designによるモジュール製品のデジタルカタログ化・Revitファミリ化を提案。"
+            },
+            "PE03": {
+                "dept": "生産技術",
+                "phase": "検証",
+                "title": "PE03 (検証): 設計内容の検証やシミュレーションにおけるデータ活用",
+                "products": "Autodesk Navisworks Manage, Inventor Simulation",
+                "value_pitch": "マルチサプライヤ設備データの統合、および自動干渉チェックによる施工前エラー検出。構造シミュレーションによる動作検証。",
+                "sales_hint": "L3-L4の顧客には、Navisworksを用いた干渉チェック自動化と設計変更プロセスのデジタル追跡（Issues連携）を提案。"
+            },
+            "PE04": {
+                "dept": "生産技術",
+                "phase": "建設",
+                "title": "PE04 (建設): 設備の導入や建設段階 of 進捗管理におけるデータ活用",
+                "products": "Autodesk Construction Cloud (ACC) / Build, Navisworks (4D)",
+                "value_pitch": "現場設備導入の進捗と計画のデジタル管理、4D施工シミュレーションによる現場干渉と作業順序の可視化・最適化。",
+                "sales_hint": "施工段階の情報分断があるL2-L3にはACCによるチェックリスト管理、L4以上には4D連動施工計画を提案して現場手戻りを防止。"
+            },
+            "PE05": {
+                "dept": "生産技術",
+                "phase": "運用",
+                "title": "PE05 (運用): 設備や生産ラインの運用・保全管理におけるデータ活用",
+                "products": "Autodesk Tandem, MES Integration APIs",
+                "value_pitch": "竣工BIMモデルからデジタルツインへの移行。工場内IoTセンサーや生産設備データ（MES）と連携し、稼働保全・予知保全を実現。",
+                "sales_hint": "運用フェーズのL3-L4顧客へTandemを訴求し、設備状態モニタリングからデジタルツインでの自動最適化へのロードマップを提示。"
+            },
+            "FI01": {
+                "dept": "工場建築・建設",
+                "phase": "計画",
+                "title": "FI01 (計画): 工場建築の計画策定や空間検討におけるデータ活用",
+                "products": "Autodesk Revit, FormIt, Autodesk Docs",
+                "value_pitch": "工場建築の初期コンセプト空間計画のデジタル可視化と、共通データ環境（CDE）による要件情報の一元管理・共有。",
+                "sales_hint": "L1-L2レベルの建築計画検討をRevitの初期ボリュームスタディとDocsによる要件管理でデジタル化することを提案。"
+            },
+            "FI02": {
+                "dept": "工場建築・建設",
+                "phase": "設計",
+                "title": "FI02 (設計): 工場建築の設計プロセスにおけるデータ活用",
+                "products": "Autodesk Revit (BIM), BIM Collaborate Pro",
+                "value_pitch": "属性（メタデータ）情報を持つインテリジェントBIMモデルの構築と、意匠・構造・設備（MEP）間のクラウドリアルタイム共同設計設計。",
+                "sales_hint": "L2-L3の3Dモデリングから、属性情報を付与したBIM設計（Revit）とクラウド共同設計（BIM Collaborate Pro）への移行を推進。"
+            },
+            "FI03": {
+                "dept": "工場建築・建設",
+                "phase": "検証",
+                "title": "FI03 (検証): 工場建築の検証（干渉チェックや施工性確認）におけるデータ活用",
+                "products": "Autodesk Navisworks Manage, BIM Collaborate (Coordination)",
+                "value_pitch": "建物構造と付帯・製造設備間の自動衝突検出（干渉チェック）。VR検証による設計不整合の現場着工前クリア。",
+                "sales_hint": "L2-L3の目視チェックから、Navisworks/BIM Collaborateを用いた自動衝突検出と指摘事項（Issues）ワークフローの運用を提案。"
+            },
+            "FI04": {
+                "dept": "工場建築・建設",
+                "phase": "建設",
+                "title": "FI04 (建設): 工場建築の施工計画や現場管理におけるデータ活用",
+                "products": "Autodesk Build, ReCap Pro (Point Cloud)",
+                "value_pitch": "3Dレーザースキャン点群（ReCap）とBIMモデルの重ね合わせによる出来形検査。現場施工計画のリアルタイム更新管理。",
+                "sales_hint": "L3-L4の出来形検証・進捗管理に対して、ReCapの点群とAutodesk Buildによる現場施工管理の組み合わせを提案。"
+            },
+            "FI05": {
+                "dept": "工場建築・建設",
+                "phase": "運用",
+                "title": "FI05 (運用): 工場の建物・設備の運用や保守管理におけるデータ活用",
+                "products": "Autodesk Tandem, Facility Manager APIs",
+                "value_pitch": "建物ファシリティマネジメント用のデジタルツイン。ライフサイクル管理や修繕履歴の紐付けによる、建物の省エネ・運用効率最適化。",
+                "sales_hint": "L3-L4の建物保全業務に対し、Tandemを用いた空間・アセットの一元的なFM運用と、将来的なスマートビルディング化を推進。"
+            }
+        }
+        
+        # Filter UI
+        selected_dept = st.selectbox("表示する部門でフィルタリング", ["すべて", "生産技術", "工場建築・建設"], key="super_admin_solution_dept")
+        
+        for qid, info in product_mapping.items():
+            if selected_dept != "すべて" and info["dept"] != selected_dept:
+                continue
+                
+            with st.container(border=True):
+                st.markdown(f"#### 🏷️ **{qid}** | **{info['dept']} - {info['phase']}**")
+                st.markdown(f"**設問概要:** {info['title']}")
+                
+                # Product Badge Style
+                st.markdown(
+                    f'<div style="background-color: #1A1A1A; border-left: 4px solid #FFFF00; padding: 12px; margin: 10px 0; border-radius: 4px;">'
+                    f'<span style="color: #FFFF00; font-weight: bold; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;">🎯 提案対象 Autodesk 製品</span><br>'
+                    f'<span style="color: #FFFFFF; font-weight: 600; font-size: 1.05rem;">{info["products"]}</span>'
+                    f'</div>', 
+                    unsafe_allow_html=True
+                )
+                
+                col_v, col_s = st.columns(2)
+                with col_v:
+                    st.markdown("**💡 バリューピッチ（価値訴求）:**")
+                    st.write(info["value_pitch"])
+                with col_s:
+                    st.markdown("**💼 セールスヒント（レベル別提案）:**")
+                    st.write(info["sales_hint"])
+
+    # --- Tab 4: システムステータス ---
+    with tabs[3]:
         st.subheader("データベース接続情報 ＆ サーバー環境ステータス")
         st.write(f"**データベース**: Google Cloud Firestore (プロジェクトID: `{db.project}`)")
         st.write(f"**現在のローカル時刻**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")

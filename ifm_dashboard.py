@@ -28,6 +28,10 @@ if brand_param == "autodesk":
         script_name = "autodesk_civil_survey.py"
     elif app_param == "mfg":
         script_name = "autodesk_mfg_survey.py"
+    elif app_param == "super_admin" or app_param == "super-admin":
+        script_name = "autodesk_super_admin.py"
+    elif app_param == "portal" or app_param == "console":
+        script_name = "autodesk_portal.py"
         
     target_path = Path(__file__).resolve().parent / script_name
     exec(open(target_path, encoding="utf-8").read(), globals())
