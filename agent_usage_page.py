@@ -57,7 +57,7 @@ def save_report(agent_id, provider, window_key, window_label, used_percent, note
         conn.close()
 
 def render_page():
-    st.subheader("🔋 Agent Limits & Usage Dashboard")
+    st.subheader(" Agent Limits & Usage Dashboard")
     st.write("AgentHubのDB（`ledger/context.sqlite`）から、各エージェントの API クォータ・消費枠（週制限・5時間制限など）の最新状況を横断的に集計表示しています。")
     
     agents_df, reports_df = load_data()
@@ -66,7 +66,7 @@ def render_page():
         st.warning("登録されているエージェントが見つかりません。")
         return
         
-    st.markdown("### 🛰️ エージェント別消費クォータ一覧")
+    st.markdown("###  エージェント別消費クォータ一覧")
     
     for _, agent in agents_df.iterrows():
         agent_id = agent["agent_id"]
@@ -80,8 +80,8 @@ def render_page():
             col_info, col_weekly, col_5hr = st.columns([2, 2, 2])
             
             with col_info:
-                st.markdown(f"##### 🤖 **{agent['display_name']}**")
-                st.caption(f"ID: `{agent_id}` | Host: `{agent['host'] or 'Unknown'}`")
+                st.markdown(f"#####  **{agent['display_name']}**")
+                st.caption(f"ID: `{agent_id}`  Host: `{agent['host'] or 'Unknown'}`")
                 st.write(f"_{agent['role'] or 'No role specified'}_")
                 
             # Filter reports
@@ -95,7 +95,7 @@ def render_page():
                 five_hour_rep = agent_reports[agent_reports["window_key"].str.contains("primary", case=False, na=False)]
                 
             with col_weekly:
-                st.markdown("**📅 週間制限 (Weekly Limit)**")
+                st.markdown("** 週間制限 (Weekly Limit)**")
                 if not weekly_rep.empty:
                     val = float(weekly_rep.iloc[0]["used_percent"])
                     note = weekly_rep.iloc[0]["note"] or ""
@@ -103,12 +103,12 @@ def render_page():
                     
                     st.metric(label="消費率", value=f"{val:.1f} %", delta=f"{100-val:.1f}% 残り", delta_color="normal")
                     st.progress(val / 100.0)
-                    st.caption(f"更新: {ts_str} | {note}")
+                    st.caption(f"更新: {ts_str}  {note}")
                 else:
                     st.info("データなし")
                     
             with col_5hr:
-                st.markdown("**⚡ 5時間制限 (5-Hour Limit)**")
+                st.markdown("** 5時間制限 (5-Hour Limit)**")
                 if not five_hour_rep.empty:
                     val = float(five_hour_rep.iloc[0]["used_percent"])
                     note = five_hour_rep.iloc[0]["note"] or ""
@@ -116,13 +116,13 @@ def render_page():
                     
                     st.metric(label="消費率", value=f"{val:.1f} %", delta=f"{100-val:.1f}% 残り", delta_color="normal")
                     st.progress(val / 100.0)
-                    st.caption(f"更新: {ts_str} | {note}")
+                    st.caption(f"更新: {ts_str}  {note}")
                 else:
                     st.info("データなし")
                     
     # Log Form Section
     st.markdown("---")
-    st.markdown("### 📝 手動利用状況更新フォーム")
+    st.markdown("###  手動利用状況更新フォーム")
     st.write("設定画面のスクリーンショットなどの最新数値を、エージェントごとに手動でデータベースに上書き登録します。")
     
     with st.form("manual_usage_form"):

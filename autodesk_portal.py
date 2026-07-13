@@ -76,7 +76,7 @@ col_main, col_sidebar = st.columns([7, 3])
 
 with col_main:
     # 1. 趣旨説明
-    st.markdown("### 🎯 アセスメント全体の目的と趣旨")
+    st.markdown("###  アセスメント全体の目的と趣旨")
     st.markdown(
         """
         本アセスメントシステムは、工場建設および生産ライン設計におけるデジタル活用成熟度を「As-Is（現状）」と「To-Be（理想）」の2軸で定量可視化し、
@@ -90,15 +90,15 @@ with col_main:
     st.markdown("---")
 
     # 2. リンクと機能説明
-    st.markdown("### 🔗 各種フォーム・ダッシュボードへのリンク")
+    st.markdown("###  各種フォーム・ダッシュボードへのリンク")
     
     # Card 1: 設問回答画面
     st.markdown(
         """
         <div class="card">
-            <h4>📝 設備管理成熟度アセスメント回答画面 (Client Facing)</h4>
+            <h4> 設備管理成熟度アセスメント回答画面 (Client Facing)</h4>
             <p>顧客企業の担当者が実際に10の設問に回答し、As-Is / To-Be を選択する公開用フォームです。</p>
-            <a href="/?brand=autodesk" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;">➡️ 回答画面を開く (既定デフォルトID)</a>
+            <a href="/?brand=autodesk" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 回答画面を開く (既定デフォルトID)</a>
         </div>
         """,
         unsafe_allow_html=True
@@ -108,9 +108,9 @@ with col_main:
     st.markdown(
         """
         <div class="card">
-            <h4>🔑 営業担当用 カスタムアンケート発行管理 (Sales Console)</h4>
+            <h4> 営業担当用 カスタムアンケート発行管理 (Sales Console)</h4>
             <p>特定の顧客企業（例: トヨタ自動車様）専用のアンケートIDを発行し、設問セット（工場設計 / 建築BIM 等）をカスタマイズする管理機能です。</p>
-            <a href="/?brand=autodesk&tab=admin" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;">➡️ 営業管理画面へ遷移する</a>
+            <a href="/?brand=autodesk&tab=admin" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 営業管理画面へ遷移する</a>
             <span style="font-size:0.8rem; color:#888888; margin-left:15px;">※要パスワード。紛失時は試作管理者に確認してください。</span>
         </div>
         """,
@@ -121,9 +121,9 @@ with col_main:
     st.markdown(
         """
         <div class="card">
-            <h4>📊 成熟度アセスメント 結果分析ダッシュボード (Maturity Dashboard)</h4>
+            <h4> 成熟度アセスメント 結果分析ダッシュボード (Maturity Dashboard)</h4>
             <p>送信された回答データを部門別・役職別に集計し、現場層と意思決定層の『認識乖離（Gap）』や、最大課題に対する『AI推奨セールストーク』を出力します。</p>
-            <a href="/?brand=autodesk&tab=dashboard" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;">➡️ 分析ダッシュボードを開く</a>
+            <a href="/?brand=autodesk&tab=dashboard" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 分析ダッシュボードを開く</a>
             <span style="font-size:0.8rem; color:#888888; margin-left:15px;">※要パスワード。紛失時は試作管理者に確認してください。</span>
         </div>
         """,
@@ -134,9 +134,9 @@ with col_main:
     st.markdown(
         """
         <div class="card">
-            <h4>🛠️ 超管理者用システムメンテナンス ＆ 製品紐付け (Super Admin Console)</h4>
-            <p>DBデータのクレンジング（削除）、および各設問がどのAutodesk製品の提案シナリオに結びついているかの「種明かし一覧」を閲覧できます。</p>
-            <a href="/?brand=autodesk&app=super_admin" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;">➡️ 超管理者コンソールを開く</a>
+            <h4> 超管理者用システムメンテナンス ＆ 製品紐付け (Super Admin Console)</h4>
+            <p>DBデータのクレンジング（削除）、および各設問がどのAutodesk製品の提案シナリオに結びついているかの「Autodesk製品提案マッピング」を閲覧できます。</p>
+            <a href="/?brand=autodesk&app=super_admin" target="_blank" style="color:#FFFF00; font-weight:600; text-decoration:none;"> 超管理者コンソールを開く</a>
             <span style="font-size:0.8rem; color:#888888; margin-left:15px;">※要パスワード。紛失時は試作管理者に確認してください。</span>
         </div>
         """,
@@ -145,7 +145,7 @@ with col_main:
 
 with col_sidebar:
     # 3. 使い方フロー (Workflow)
-    st.markdown("### 📋 標準運用フロー")
+    st.markdown("###  標準運用フロー")
     st.markdown(
         """
         **1. 専用アンケートIDの発行**
@@ -166,19 +166,19 @@ with col_sidebar:
     st.markdown("---")
     
     # 4. 問い合わせ導線とパスワードポリシー
-    st.markdown("### 📞 問い合わせ ＆ 認証について")
+    st.markdown("###  問い合わせ ＆ 認証について")
     st.info(
-        "**🔐 パスワードについて**\n\n"
+        "** パスワードについて**\n\n"
         "各種管理画面・ダッシュボードの閲覧には専用パスワードが必要です。セキュリティ上、コードや共有ドキュメント内にはパスワードを直書きしていません。\n\n"
         "パスワードの発行・確認やシステムエラーに関するご相談は、以下へ直接お問い合わせください：\n\n"
         "**試作管理者 / システムオーナー:**\n"
-        "👤 **Hidenari Sasaki / IFMチーム**"
+        " **Hidenari Sasaki / IFMチーム**"
     )
     
     st.markdown("---")
     
     # 5. FAQ
-    st.markdown("### ❓ よくある質問 (FAQ)")
+    st.markdown("###  よくある質問 (FAQ)")
     with st.expander("Q. 送信されたデータはどこに保存されますか？"):
         st.write("Google Cloud Firestore に安全に格納され、同時に指定の営業管理用 Google Sheets にもリアルタイム転送されます。")
     with st.expander("Q. 顧客が回答中にエラーが出ると言った場合は？"):

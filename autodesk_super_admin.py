@@ -97,7 +97,7 @@ if super_pw == correct_pw:
         st.error("データベースへの接続が確立できません。")
         st.stop()
         
-    tabs = st.tabs(["📁 アンケートID管理", "📝 回答データ一括クレンジング", "💡 設問-プロダクト紐付け（種明かし）", "📊 システムステータス"])
+    tabs = st.tabs([" アンケートID管理", " 回答データ一括クレンジング", " Autodesk製品提案マッピング", " システムステータス"])
     
     # --- Tab 1: アンケートID管理 ---
     with tabs[0]:
@@ -138,7 +138,7 @@ if super_pw == correct_pw:
                     col_info, col_del = st.columns([8, 2])
                     with col_info:
                         st.markdown(
-                            f"📌 **アンケートID**: `{s['survey_id']}`  ·  **顧客企業名**: {s['client_name']}  ·  **作成者**: {s['creator']}  ·  **作成日時**: {s['created_at']}  ·  **設問数**: {s['num_questions']}問"
+                            f" **アンケートID**: `{s['survey_id']}`  ·  **顧客企業名**: {s['client_name']}  ·  **作成者**: {s['creator']}  ·  **作成日時**: {s['created_at']}  ·  **設問数**: {s['num_questions']}問"
                         )
                     with col_del:
                         st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
@@ -179,7 +179,7 @@ if super_pw == correct_pw:
                 resp_df = pd.DataFrame(responses_list)
                 
                 # アンケートID（survey_id）ごとにグルーピングした件数表示
-                st.markdown("### 📊 アンケートIDごとの回答蓄積状況")
+                st.markdown("###  アンケートIDごとの回答蓄積状況")
                 summary_grp = resp_df.groupby('survey_id').agg(
                     回答者ユニーク数=('email', 'nunique'),
                     送信件数=('doc_id', 'count')
@@ -187,12 +187,12 @@ if super_pw == correct_pw:
                 st.dataframe(summary_grp, use_container_width=True, hide_index=True)
                 
                 st.markdown("---")
-                st.markdown("### 🚨 アンケートID単位での回答データ一括削除")
+                st.markdown("###  アンケートID単位での回答データ一括削除")
                 target_del_sid = st.selectbox("一括削除対象のアンケートIDを選択してください", sorted(list(resp_df['survey_id'].unique())))
                 
                 # 削除ボタン
                 st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
-                confirm_del_btn = st.button(f"🔴 アンケートID '{target_del_sid}' のすべての回答データを一括削除する", key="btn_bulk_delete_responses")
+                confirm_del_btn = st.button(f" アンケートID '{target_del_sid}' のすべての回答データを一括削除する", key="btn_bulk_delete_responses")
                 if confirm_del_btn:
                     # Firestoreクエリで該当ドキュメントを抽出して削除
                     docs_to_delete = db.collection("responses").where("survey_id", "==", target_del_sid).stream()
@@ -205,12 +205,12 @@ if super_pw == correct_pw:
                 st.markdown("</div>", unsafe_allow_html=True)
                 
                 st.markdown("---")
-                st.markdown("### 📄 個別回答レコードの一覧と個別削除")
+                st.markdown("###  個別回答レコードの一覧と個別削除")
                 for r in responses_list:
                     col_r_info, col_r_del = st.columns([8, 2])
                     with col_r_info:
                         st.markdown(
-                            f"👤 **回答者**: {r['respondent']} ({r['email']})  ·  **部署**: {r['team']}  ·  **アンケートID**: `{r['survey_id']}`  ·  **日時**: {r['timestamp'][:19].replace('T', ' ')}"
+                            f" **回答者**: {r['respondent']} ({r['email']})  ·  **部署**: {r['team']}  ·  **アンケートID**: `{r['survey_id']}`  ·  **日時**: {r['timestamp'][:19].replace('T', ' ')}"
                         )
                     with col_r_del:
                         st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
@@ -223,9 +223,9 @@ if super_pw == correct_pw:
         except Exception as e:
             st.error(f"回答データ一覧取得エラー: {e}")
             
-    # --- Tab 3: 設問-プロダクト紐付け（種明かし） ---
+    # --- Tab 3: Autodesk製品提案マッピング ---
     with tabs[2]:
-        st.subheader("💡 アンケート設問とAutodeskプロダクトの関連性（営業用種明かし）")
+        st.subheader(" アンケート設問とAutodeskプロダクトの関連性（営業用製品提案マッピング）")
         st.write("各アセスメント設問が「どのAutodesk製品の提案や価値訴求に結びつくか」を整理したセールスチートシートです。顧客のスコア（As-Is/To-Be）に応じて提案アプローチを決定するための判断基準としてご利用ください。")
         
         # Mapping definition
@@ -320,13 +320,13 @@ if super_pw == correct_pw:
                 continue
                 
             with st.container(border=True):
-                st.markdown(f"#### 🏷️ **{qid}** | **{info['dept']} - {info['phase']}**")
+                st.markdown(f"####  **{qid}**  **{info['dept']} - {info['phase']}**")
                 st.markdown(f"**設問概要:** {info['title']}")
                 
                 # Product Badge Style
                 st.markdown(
                     f'<div style="background-color: #1A1A1A; border-left: 4px solid #FFFF00; padding: 12px; margin: 10px 0; border-radius: 4px;">'
-                    f'<span style="color: #FFFF00; font-weight: bold; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;">🎯 提案対象 Autodesk 製品</span><br>'
+                    f'<span style="color: #FFFF00; font-weight: bold; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;"> 提案対象 Autodesk 製品</span><br>'
                     f'<span style="color: #FFFFFF; font-weight: 600; font-size: 1.05rem;">{info["products"]}</span>'
                     f'</div>', 
                     unsafe_allow_html=True
@@ -334,10 +334,10 @@ if super_pw == correct_pw:
                 
                 col_v, col_s = st.columns(2)
                 with col_v:
-                    st.markdown("**💡 バリューピッチ（価値訴求）:**")
+                    st.markdown("** バリューピッチ（価値訴求）:**")
                     st.write(info["value_pitch"])
                 with col_s:
-                    st.markdown("**💼 セールスヒント（レベル別提案）:**")
+                    st.markdown("** セールスヒント（レベル別提案）:**")
                     st.write(info["sales_hint"])
 
     # --- Tab 4: システムステータス ---

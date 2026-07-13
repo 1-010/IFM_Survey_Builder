@@ -71,7 +71,7 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-st.title("🏭 IFM Maturity Assessment System")
+st.title(" IFM Maturity Assessment System")
 st.markdown("IFM（Integrated Factory Management）の成熟度自己診断システムです。現状のレベルと将来の目標を可視化します。")
 
 # Paths
@@ -91,10 +91,10 @@ def get_active_questions():
     if survey_id:
         custom_survey = get_custom_survey(survey_id)
         if custom_survey:
-            st.success(f"📋 **{custom_survey.get('client_name', '顧客')}様向け** カスタム設問をロードしました（作成者: {custom_survey.get('creator', '営業')}）")
+            st.success(f" **{custom_survey.get('client_name', '顧客')}様向け** カスタム設問をロードしました（作成者: {custom_survey.get('creator', '営業')}）")
             return pd.DataFrame(custom_survey["questions"]), survey_id
         else:
-            st.warning(f"⚠️ 指定されたアンケートID `{survey_id}` が見つかりません。デフォルトの設問を表示します。")
+            st.warning(f" 指定されたアンケートID `{survey_id}` が見つかりません。デフォルトの設問を表示します。")
     
     return pd.DataFrame(load_default_questions()), "default"
 
@@ -144,7 +144,7 @@ def get_worksheet():
     except Exception as e:
         sa_email = st.secrets["gserviceaccount"].get("client_email", "サービスアカウント")
         st.error(f"スプレッドシートへのアクセスに失敗しました。")
-        st.info(f"💡 対処法: スプレッドシートの右上にある「共有」ボタンを押し、以下のサービスアカウントを **「編集者」** として追加してください：\n\n`{sa_email}`")
+        st.info(f" 対処法: スプレッドシートの右上にある「共有」ボタンを押し、以下のサービスアカウントを **「編集者」** として追加してください：\n\n`{sa_email}`")
         return None
 
 def load_responses_from_sheets():
@@ -228,17 +228,17 @@ if q_df.empty:
 is_client_access = "survey_id" in st.query_params
 
 if is_client_access:
-    tabs = st.tabs(["📝 アンケート回答入力"])
+    tabs = st.tabs([" アンケート回答入力"])
     tab_input = tabs[0]
     tab_dashboard = None
     tab_admin = None
 else:
-    tabs = st.tabs(["📝 アンケート回答入力", "📊 結果分析ダッシュボード", "🔧 営業管理（カスタム発行）"])
+    tabs = st.tabs([" アンケート回答入力", " 結果分析ダッシュボード", " 営業管理（カスタム発行）"])
     tab_input = tabs[0]
     tab_dashboard = tabs[1]
     tab_admin = tabs[2]
 
-### 📝 Tab 1: アンケート回答入力 ###
+###  Tab 1: アンケート回答入力 ###
 with tab_input:
     st.header("アンケート回答フォーム")
     st.info("お名前、メールアドレス、勤続年数を入力のうえ、各設問に対する現状の評価と将来の目標を回答してください。")
@@ -270,7 +270,7 @@ with tab_input:
     
     # 動的なUI制御のため、formを使わずに個々のウィジェットとして作成し、最後に送信ボタンを置く
     for dept_name, group in questions_by_dept:
-        st.markdown(f"### ➡️ {dept_name} 部門の設問")
+        st.markdown(f"###  {dept_name} 部門の設問")
         
         for _, row in group.iterrows():
             qid = row['question_id']
@@ -317,11 +317,11 @@ with tab_input:
     if submit_clicked:
         # バリデーション
         if not respondent_name.strip():
-            st.error("❌ 回答者名を入力してください。")
+            st.error(" 回答者名を入力してください。")
         elif not email_input.strip() or not is_valid_email(email_input):
-            st.error("❌ 有効なメールアドレスを入力してください。")
+            st.error(" 有効なメールアドレスを入力してください。")
         elif not experience_years:
-            st.error("❌ 勤続年数を選択してください。")
+            st.error(" 勤続年数を選択してください。")
         else:
             timestamp = datetime.now().isoformat()
             records = []
@@ -374,7 +374,7 @@ with tab_input:
                     sheets_success = save_response_to_sheets(records)
                 
                 if fs_success:
-                    success_msg = "🎉 回答がセキュアなデータベースへ正常に保存されました！"
+                    success_msg = " 回答がセキュアなデータベースへ正常に保存されました！"
                     if sheets_success:
                         success_msg += "（Googleスプレッドシートへの同期も完了しました）"
                     else:
@@ -382,11 +382,11 @@ with tab_input:
                     st.success(success_msg)
                     st.balloons()
                 else:
-                    st.error("❌ データベースへの保存に失敗しました。管理者にお問い合わせください。")
+                    st.error(" データベースへの保存に失敗しました。管理者にお問い合わせください。")
 
 
 
-### 📊 Tab 2: 結果分析ダッシュボード ###
+###  Tab 2: 結果分析ダッシュボード ###
 if tab_dashboard:
     with tab_dashboard:
         st.header("成熟度アセスメントの分析・比較")
@@ -400,11 +400,11 @@ if tab_dashboard:
             resp_df = load_all_responses_merged()
             
             if resp_df.empty:
-                st.warning("まだ回答データがないか、スプレッドシートの取得に失敗しています。「📝 アンケート回答入力」タブでの回答送信、またはスプレッドシートの共有設定を確認してください。")
+                st.warning("まだ回答データがないか、スプレッドシートの取得に失敗しています。「 アンケート回答入力」タブでの回答送信、またはスプレッドシートの共有設定を確認してください。")
             else:
                 # グループ比較モード
-                st.subheader("📊 絞り込みとグループ比較")
-                compare_mode = st.checkbox("👥 2つのグループを比較する（比較モード）", value=False)
+                st.subheader(" 絞り込みとグループ比較")
+                compare_mode = st.checkbox(" 2つのグループを比較する（比較モード）", value=False)
                 
                 # フィルターオプション用のユニーク値リスト
                 unique_domains = sorted([str(d) for d in resp_df['domain'].unique() if d and pd.notna(d)])
@@ -436,7 +436,7 @@ if tab_dashboard:
                     col_filter_a, col_filter_b = st.columns(2)
                     
                     with col_filter_a:
-                        st.markdown("#### 🔵 グループA の条件")
+                        st.markdown("####  グループA の条件")
                         survey_a = st.selectbox("アンケートID (グループA)", ["すべて"] + unique_surveys, key="survey_a")
                         domain_a = st.selectbox("ドメイン (グループA)", ["すべて"] + unique_domains, key="domain_a")
                         exp_a = st.selectbox("勤続年数 (グループA)", unique_years, key="exp_a")
@@ -545,16 +545,16 @@ if tab_dashboard:
                     return fig
         
                 # レーダーチャート表示
-                st.markdown("### 📊 分析結果チャート")
+                st.markdown("###  分析結果チャート")
                 if df_a.empty and (not compare_mode or df_b.empty):
-                    st.warning("⚠️ 指定された条件に合致する回答データがありません。フィルターの条件を緩めてください。")
+                    st.warning(" 指定された条件に合致する回答データがありません。フィルターの条件を緩めてください。")
                 else:
                     fig = plot_radar_comparison(df_a, df_b, compare_mode)
                     st.plotly_chart(fig, use_container_width=True)
         
                 # 詳細のテーブル分析（グループAベース）
                 st.markdown("---")
-                st.markdown("### 📝 詳細アセスメントギャップ分析 (グループAの集計値)")
+                st.markdown("###  詳細アセスメントギャップ分析 (グループAの集計値)")
                 
                 if not df_a.empty:
                     agg_a = df_a.groupby(['question_id', 'phase'])[['as_is', 'to_be']].mean().reset_index()
@@ -574,7 +574,7 @@ if tab_dashboard:
                         asis_str = f"{round(avg_asis, 1)}" if pd.notna(avg_asis) else "該当なし"
                         tobe_str = f"{round(avg_tobe, 1)}" if pd.notna(avg_tobe) else "該当なし"
                         
-                        with st.expander(f"【{row['department']}】 {row['phase']} ({row['question_id']}) : 現状の評価平均 {asis_str} ➡️ 将来の目標平均 {tobe_str}"):
+                        with st.expander(f"【{row['department']}】 {row['phase']} ({row['question_id']}) : 現状の評価平均 {asis_str}  将来の目標平均 {tobe_str}"):
                             st.write("**成熟度定義：**")
                             
                             levels_df = pd.DataFrame([
@@ -606,10 +606,10 @@ if tab_dashboard:
             st.info("管理パスワードを入力してください。")
 
 
-### 🔧 Tab 3: 営業管理（カスタム発行） ###
+###  Tab 3: 営業管理（カスタム発行） ###
 if tab_admin:
     with tab_admin:
-        st.header("🔧 営業担当用 カスタムアンケート発行管理")
+        st.header(" 営業担当用 カスタムアンケート発行管理")
         st.info("営業担当者が顧客に合わせたカスタムアンケートを発行・管理するためのページです。")
         
         # 認証
@@ -630,7 +630,7 @@ if tab_admin:
             if new_survey_id.strip():
                 # Validate format
                 if not re.match(r"^[a-zA-Z0-9\-_]+$", new_survey_id.strip()):
-                    st.error("⚠️ アンケートIDは英数字、ハイフン(-), アンダースコア(_)のみ使用可能です。")
+                    st.error(" アンケートIDは英数字、ハイフン(-), アンダースコア(_)のみ使用可能です。")
                 else:
                     if st.button("既存のカスタム設問を読み込む (IDが存在する場合)"):
                         existing = get_custom_survey(new_survey_id.strip())
@@ -683,11 +683,11 @@ if tab_admin:
             st.markdown("---")
             if st.button("アンケートを発行・保存する", type="primary", use_container_width=True):
                 if not new_survey_id.strip():
-                    st.error("❌ アンケートIDを入力してください。")
+                    st.error(" アンケートIDを入力してください。")
                 elif not new_client_name.strip():
-                    st.error("❌ 顧客企業名を入力してください。")
+                    st.error(" 顧客企業名を入力してください。")
                 elif not new_creator.strip():
-                    st.error("❌ 作成者名を入力してください。")
+                    st.error(" 作成者名を入力してください。")
                 else:
                     sid = new_survey_id.strip()
                     success = save_custom_survey(
@@ -698,21 +698,21 @@ if tab_admin:
                     )
                     
                     if success:
-                        st.success(f"🎉 カスタムアンケート `{sid}` が正常にデータベースへ保存・発行されました！")
+                        st.success(f" カスタムアンケート `{sid}` が正常にデータベースへ保存・発行されました！")
                         
                         # Generate Links
                         prod_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?survey_id={sid}"
                         local_url = f"http://localhost:8501/?survey_id={sid}"
                         
-                        st.info("📋 **顧客配信用リンク (本番環境):**")
+                        st.info(" **顧客配信用リンク (本番環境):**")
                         st.code(prod_url, language=None)
-                        st.write(f"🔗 [本番環境リンクを開く]({prod_url})")
-                        st.info("💻 **テスト用リンク (ローカル環境):**")
+                        st.write(f" [本番環境リンクを開く]({prod_url})")
+                        st.info(" **テスト用リンク (ローカル環境):**")
                         st.code(local_url, language=None)
-                        st.write(f"🔗 [ローカルテストリンクを開く]({local_url})")
+                        st.write(f" [ローカルテストリンクを開く]({local_url})")
                         st.balloons()
                     else:
-                        st.error("❌ カスタムアンケートの保存に失敗しました。")
+                        st.error(" カスタムアンケートの保存に失敗しました。")
                         
         elif admin_pw != "":
             st.error("パスワードが正しくありません。")

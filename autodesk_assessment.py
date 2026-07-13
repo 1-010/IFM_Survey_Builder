@@ -378,7 +378,7 @@ else:
     tab_dashboard = tabs[1]
     tab_admin = tabs[2]
 
-### 📝 Tab 1: 回答入力フォーム ###
+###  Tab 1: 回答入力フォーム ###
 with tab_input:
     col_left_form, col_right_chart = st.columns([11, 9])
     
@@ -703,7 +703,7 @@ with tab_input:
                 else:
                     st.error("データの格納に失敗しました。認証鍵またはデータベースの接続制限を確認してください。")
 
-### 📊 Tab 2: 結果分析ダッシュボード ###
+###  Tab 2: 結果分析ダッシュボード ###
 if tab_dashboard:
     with tab_dashboard:
         st.header("成熟度アセスメントの分析・比較")
@@ -815,7 +815,7 @@ if tab_dashboard:
                     df_a = filter_data(resp_df, domain_a, exp_a, team_a, cat_a, survey_a)
                     df_b = pd.DataFrame()
 
-                # --- 📊 サマリーインフォメーション (回答人数) ---
+                # ---  サマリーインフォメーション (回答人数) ---
                 st.markdown("<hr style='border-color:#333333; margin:15px 0;'>", unsafe_allow_html=True)
                 col_sum1, col_sum2 = st.columns([1, 2])
                 with col_sum1:
@@ -1027,7 +1027,7 @@ if tab_dashboard:
                     with col_g1:
                         st.plotly_chart(fig_gap, use_container_width=True)
                     with col_g2:
-                        st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-bottom:10px;'>🚨 組織内認識不一致度アラート</h5>", unsafe_allow_html=True)
+                        st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-bottom:10px;'> 組織内認識不一致度アラート</h5>", unsafe_allow_html=True)
                         
                         gap_details = []
                         for q in df_a_sorted['question_id'].unique():
@@ -1057,11 +1057,101 @@ if tab_dashboard:
                                 st.write("現場層と意思決定層の間で認識ギャップはありません。")
                         else:
                             st.write("データが不足しています。")
+
+                # --- Autodesk製品提案マッピング参照 ---
+                st.markdown("<hr style='border-color:#333333; margin:25px 0;'>", unsafe_allow_html=True)
+                st.subheader("Autodesk製品提案マッピング仕様")
+                st.write("アセスメント設問がどのAutodesk製品の提案や価値訴求に結びつくかを整理したマッピングです。")
+                
+                with st.expander("各設問と製品提案シナリオのマッピングを表示する"):
+                    # Mapping definitions for all 5 sets
+                    all_mappings = {
+                        "設備管理成熟度アセスメント (Default - PE/FI)": {
+                            "PE01": {"dept": "生産技術", "phase": "計画", "title": "PE01 (計画): 生産・工程計画やレイアウト設備検討におけるデータ活用", "products": "Factory Design Utilities (FDU), AutoCAD Architecture, Inventor", "value_pitch": "2D-3D双方向同期レイアウト設計による手戻り防止。2Dでの簡易配置が3Dへ即座に反映され、設備干渉の早期発見が可能。", "sales_hint": "L1-L2レベル（2D中心）の顧客には、FDUを用いた2D-3Dレイアウト同期と、標準アセットライブラリによる配置設計の高速化を提案。"},
+                            "PE02": {"dept": "生産技術", "phase": "設計", "title": "PE02 (設計): 設備やラインの設計プロセスにおけるデータ活用", "products": "Autodesk Inventor, iLogic, Informed Design", "value_pitch": "パラメータ駆動設計とモデリングルールの標準化。Informed Designにより製造可能な設計条件をパラメータとしてロックし、Revitへ出力可能。", "sales_hint": "L2-L3の顧客には、iLogicによる定型モデリングの自動化、およびInformed Designによるモジュール製品のデジタルカタログ化・Revitファミリ化を提案。"},
+                            "PE03": {"dept": "生産技術", "phase": "検証", "title": "PE03 (検証): 設計内容の検証やシミュレーションにおけるデータ活用", "products": "Autodesk Navisworks Manage, Inventor Simulation", "value_pitch": "マルチサプライヤ設備データの統合、および自動干渉チェックによる施工前エラー検出。構造シミュレーションによる動作検証。", "sales_hint": "L3-L4の顧客には、Navisworksを用いた干渉チェック自動化と設計変更プロセスのデジタル追跡（Issues連携）を提案。"},
+                            "PE04": {"dept": "生産技術", "phase": "建設", "title": "PE04 (建設): 設備の導入や建設段階の進捗管理におけるデータ活用", "products": "Autodesk Construction Cloud (ACC) / Build, Navisworks (4D)", "value_pitch": "現場設備導入の進捗と計画のデジタル管理、4D施工シミュレーションによる現場干渉と作業順序の可視化・最適化。", "sales_hint": "施工段階の情報分断があるL2-L3にはACCによるチェックリスト管理、L4以上には4D連動施工計画を提案して現場手戻りを防止。"},
+                            "PE05": {"dept": "生産技術", "phase": "運用", "title": "PE05 (運用): 設備や生産ラインの運用・保全管理におけるデータ活用", "products": "Autodesk Tandem, MES Integration APIs", "value_pitch": "竣工BIMモデルからデジタルツインへの移行。工場内IoTセンサーや生産設備データ（MES）と連携し、稼働保全・予知保全を実現。", "sales_hint": "運用フェーズのL3-L4顧客へTandemを訴求し、設備状態モニタリングからデジタルツインでの自動最適化へのロードマップを提示。"},
+                            "FI01": {"dept": "工場建築・建設", "phase": "計画", "title": "FI01 (計画): 工場建築の計画策定や空間検討におけるデータ活用", "products": "Autodesk Revit, FormIt, Autodesk Docs", "value_pitch": "工場建築の初期コンセプト空間計画のデジタル可視化と、共通データ環境（CDE）による要件情報の一元管理・共有。", "sales_hint": "L1-L2レベルの建築計画検討をRevitの初期ボリュームスタディとDocsによる要件管理でデジタル化することを提案。"},
+                            "FI02": {"dept": "工場建築・建設", "phase": "設計", "title": "FI02 (設計): 工場建築の設計プロセスにおけるデータ活用", "products": "Autodesk Revit (BIM), BIM Collaborate Pro", "value_pitch": "属性（メタデータ）情報を持つインテリジェントBIMモデルの構築と、意匠・構造・設備（MEP）間のクラウドリアルタイム共同設計設計。", "sales_hint": "L2-L3の3Dモデリングから、属性情報を付与したBIM設計（Revit）とクラウド共同設計（BIM Collaborate Pro）への移行を推進。"},
+                            "FI03": {"dept": "工場建築・建設", "phase": "検証", "title": "FI03 (検証): 工場建築の検証（干渉チェックや施工性確認）におけるデータ活用", "products": "Autodesk Navisworks Manage, BIM Collaborate (Coordination)", "value_pitch": "建物構造と付帯・製造設備間の自動衝突検出（干渉チェック）。VR検証による設計不整合の現場着工前クリア。", "sales_hint": "L2-L3の目視チェックから、Navisworks/BIM Collaborateを用いた自動衝突検出と指摘事項（Issues）ワークフローの運用を提案。"},
+                            "FI04": {"dept": "工場建築・建設", "phase": "建設", "title": "FI04 (建設): 工場建築の施工計画や現場管理におけるデータ活用", "products": "Autodesk Build, ReCap Pro (Point Cloud)", "value_pitch": "3Dレーザースキャン点群（ReCap）とBIMモデルの重ね合わせによる出来形検査。現場施工計画のリアルタイム更新管理。", "sales_hint": "L3-L4の出来形検証・進捗管理に対して、ReCapの点群とAutodesk Buildによる現場施工管理の組み合わせを提案。"},
+                            "FI05": {"dept": "工場建築・建設", "phase": "運用", "title": "FI05 (運用): 工場の建物・設備の運用や保守管理におけるデータ活用", "products": "Autodesk Tandem, Facility Manager APIs", "value_pitch": "建物ファシリティマネジメント用のデジタルツイン。ライフサイクル管理や修繕履歴の紐付けによる、建物の省エネ・運用効率最適化。", "sales_hint": "L3-L4の建物保全業務に対し、Tandemを用いた空間・アセットの一元的なFM運用と、将来的なスマートビルディング化を推進。"}
+                        },
+                        "工場設計・プロダクトクラウドアセスメント (Factory Cloud - FC)": {
+                            "FC01": {"dept": "工場設計", "phase": "初期計画・環境分析", "title": "FC01 (初期計画・環境分析): 敷地風向・日影解析等の初期検討", "products": "Autodesk Forma", "value_pitch": "AIによる迅速な敷地環境シミュレーションにより、初期計画段階での気流・日照問題を秒速で解決し手戻りを劇的に削減します。", "sales_hint": "風向・日照データを手作業で集計しているL1-L2顧客に対し、クラウド上での一撃シミュレーションによる工期圧縮を提案。"},
+                            "FC02": {"dept": "工場設計", "phase": "工程シミュレーション", "title": "FC02 (工程シミュレーション): 時間軸を考慮した搬送ルート最適化", "products": "Autodesk FlexSim", "value_pitch": "工場内レイアウトと連携した動的なボトルネック検出。工程内のモノの流れを可視化し、ライン効率を最大化します。", "sales_hint": "搬送シミュレーションを頭の中や表計算で行っているL1-L2顧客に、動的な3D物流・ボトルネック可視化の重要性をフックに提案。"},
+                            "FC03": {"dept": "工場設計", "phase": "3Dレイアウト同期", "title": "FC03 (3Dレイアウト同期): 2D/3D図面の双方向整合性維持", "products": "Factory Design Utilities (FDU)", "value_pitch": "AutoCADとInventor間の完全双方向同期。2Dの配置図面が3D設備モデルとリアルタイムで連動し、整合性を自動維持します。", "sales_hint": "2Dと3Dの図面二重作成に苦しむL2-L3のエンジニアにFDUを刺し、設計スピード向上と手戻りゼロを訴求。"},
+                            "FC04": {"dept": "工場設計", "phase": "AI支援モデリング", "title": "FC04 (AI支援モデリング): 設計プロセスの自律化・自動化", "products": "AIモデリング (Navastoなど), ジェネレーティブデザイン", "value_pitch": "設計条件や過去データをもとにした、レイアウト設計案のAI自動生成と、エンジニアリング意思決定の自律化支援。", "sales_hint": "L3-L4の先進企業に対し、設計条件から最適な機器配置をAI生成する高度設計自動化ロードマップを提案。"},
+                            "FC05": {"dept": "工場設計", "phase": "作図自動化", "title": "FC05 (作図自動化): 定型業務・BOM・図面出力の自動化", "products": "AutoCAD Mechanical, AutoCAD APIs/LISP", "value_pitch": "専用ツールセットやAPI/LISPスクリプトを活用した、2D詳細図面の自動生成とBOM（部品表）出力の自動化。", "sales_hint": "定型作図を手作業で行っているL2顧客に対し、APIによる一括自動レイアウト出力とBOM連動によるミス削減を提案。"},
+                            "FC06": {"dept": "工場設計", "phase": "クラウド協調設計", "title": "FC06 (クラウド協調設計): サプライヤ間モデル共有と変更追跡", "products": "Autodesk Construction Cloud (ACC) Docs / Collaboration", "value_pitch": "安全な共通データ環境(CDE)による、複数サプライヤ設備3Dモデルのリアルタイム共有と、設計変更のバージョン履歴管理。", "sales_hint": "メールやファイル転送で3Dモデルをやり取りしている分断されたL2-L3顧客に、クラウドBIMデータ流通による情報一元化を提案。"},
+                            "FC07": {"dept": "工場設計", "phase": "意思決定プロセス", "title": "FC07 (意思決定プロセス): VR内覧・役員合意形成の迅速化", "products": "FlexSim VR, VRED Pro", "value_pitch": "実寸VR空間における事前検証と、美しくリアルな3Dビジュアライゼーションによる関係者・経営層の合意形成スピードの劇的向上。", "sales_hint": "稟議や承認プロセスに何週間もかかっている企業に対し、VRを用いた一撃での意思決定スピード向上をオファー。"},
+                            "FC08": {"dept": "工場設計", "phase": "バリエーション設計", "title": "FC08 (バリエーション設計): パラメータ駆動型自動設計", "products": "Autodesk Inventor, iLogic", "value_pitch": "iLogicを用いた、設計ルールの定義による設備の自動変形・コンフィギュレーションと、それに伴う図面・帳票の自動更新機能。", "sales_hint": "製品の仕様変更や受注ごとに一から図面を描き直しているL2-L3の設備メーカーに対し、パラメータ駆動の完全自動設計を提案。"}
+                        },
+                        "建築設計・施工 BIMアセスメント (AEC - AE)": {
+                            "AE01": {"dept": "建築設計", "phase": "初期ボリューム・日影解析", "title": "AE01 (初期ボリューム・日影解析): 敷地解析と初期ボリューム検討", "products": "Autodesk Forma", "value_pitch": "初期段階での迅速な日影・気流・騒音シミュレーション。設計初期フェーズの意思決定をデータに基づき支援します。", "sales_hint": "敷地検討を手作業やExcelで行っている初期段階の建築事務所に対し、Formaによる即時クラウドシミュレーションを提案。"},
+                            "AE02": {"dept": "建築設計", "phase": "BIM詳細設計", "title": "AE02 (BIM詳細設計): メタデータを持つ3D BIM設計への移行", "products": "Autodesk Revit", "value_pitch": "意匠、構造、MEP（設備）の全情報を統合した3D BIMによる設計。図面相互の一貫性を常に保ち、転記ミスを完全排除します。", "sales_hint": "2D設計からBIMへの移行期にあるL2顧客に対し、Revit導入による図面の完全不整合解消とBIMモデルの価値をアピール。"},
+                            "AE03": {"dept": "建築設計", "phase": "統合コーディネーション", "title": "AE03 (統合コーディネーション): 自動衝突検出と施工性検証", "products": "Autodesk Navisworks Manage, BIM Collaborate", "value_pitch": "複数分野の3Dモデルを統合し、自動衝突検出（干渉チェック）を実施。着工前に現場手戻りの要因となる設計不整合をクリアします。", "sales_hint": "現場で設備と構造の干渉が見つかり予算超過しているL2-L3のゼネコン・サブコンに対し、Navisworksによる事前クリアを提案。"},
+                            "AE04": {"dept": "建築設計", "phase": "共通データ環境", "title": "AE04 (共通データ環境): ISO 19650準拠のクラウドコラボレーション", "products": "Autodesk Docs / BIM Collaborate Pro", "value_pitch": "共通データ環境(CDE)によるプロジェクト情報の一元管理。異なる会社間でも安全に最新のBIMモデルを共有・共同設計します。", "sales_hint": "関係者間のデータ共有がメールやファイルストレージで分断されているL2-L3顧客に、Docsによる一元管理と共同設計を提案。"},
+                            "AE05": {"dept": "建築設計", "phase": "施工図・数量算出", "title": "AE05 (施工図・数量算出): 3D/2D統合数量算出・積算", "products": "Autodesk Takeoff", "value_pitch": "BIMモデルからの自動数量算出と2D図面計測の統合。積算作業を高速化・高精度化し、見積の信頼性を担保します。", "sales_hint": "積算・見積もりを手作業やPDF計測で行っているL1-L2顧客に対し、Takeoffによる3D自動拾い出しと効率化を訴求。"},
+                            "AE06": {"dept": "建築設計", "phase": "現場管理・デジタル施工", "title": "AE06 (現場管理・デジタル施工): モバイルでの図面・指摘事項管理", "products": "Autodesk Build", "value_pitch": "現場とオフィスをクラウドで接続。タブレット等による最新図面の閲覧、指摘事項（品質・安全）のデジタル起票・追跡管理。", "sales_hint": "紙の図面を現場に持ち歩き、事務所に戻ってPCで写真整理を行っている施工現場向けに、Buildによる現場施工管理を提案。"},
+                            "AE07": {"dept": "建築設計", "phase": "工程シミュレーション", "title": "AE07 (工程シミュレーション): BIMモデル連動4D工程表", "products": "Autodesk Navisworks (TimeLiner)", "value_pitch": "BIMオブジェクトと工程スケジュールをリンクさせ、4D施工シミュレーションを実行。工期遅延や現場配置リスクを可視化します。", "sales_hint": "複雑な大型プロジェクトで工期遅延や資材置き場競合に悩むL3顧客に対し、4Dシミュレーションによる現場干渉防止を提案。"},
+                            "AE08": {"dept": "建築設計", "phase": "デジタルツイン移行", "title": "AE08 (デジタルツイン移行): 竣工BIMからデジタルツインFMへの接続", "products": "Autodesk Tandem", "value_pitch": "竣工したアセットのインテリジェントモデル（デジタルツイン）化。FMデータベースへアセットデータをシームレスに引渡します。", "sales_hint": "竣工引き渡し後の建物維持管理フェーズでExcelや紙ファイルに苦しむL3-L4オーナー企業に、TandemでのFMアセット管理を提案。"}
+                        },
+                        "インフラ・土木設計 CDEアセスメント (Civil - CI)": {
+                            "CI01": {"dept": "土木設計", "phase": "現況データと初期計画", "title": "CI01 (現況データと初期計画): 現況地形と道路設計の3D比較", "products": "Autodesk InfraWorks", "value_pitch": "GISやドローン点群を含む大規模な現況3D地形モデルの迅速な構築。初期計画の代替案検討と景観シミュレーションの高速化を実現します。", "sales_hint": "国土地理院マップや平面図から初期景観イメージを個別に作っているL1-L2設計事務所に、InfraWorksによる秒速3Dモデル化を提案。"},
+                            "CI02": {"dept": "土木設計", "phase": "土木3D設計", "title": "CI02 (土木3D設計): CIM道路線形・パラメトリック設計", "products": "Autodesk Civil 3D", "value_pitch": "3D線形設計およびサーフェスベースの法面パラメトリック設計。線形の変更に合わせてすべての土量や法面展開が自動追従・更新されます。", "sales_hint": "設計変更に伴う断面図の描き直しや土量計算のやり直しを手作業で行っているL2顧客に対し、Civil 3Dの自動連動設計を提案。"},
+                            "CI03": {"dept": "土木設計", "phase": "土木構造物との統合", "title": "CI03 (土木構造物との統合): Revit構造物（橋梁等）とCivil 3D道路線形の動的同期", "products": "Autodesk Civil 3D, Autodesk Revit", "value_pitch": "道路設計と構造物設計の緊密な連携。Civil 3Dの最新道路線形データをRevitの橋梁などの構造設計モデルと動的同期・干渉検出します。", "sales_hint": "構造設計と道路設計がバラバラで座標ずれや干渉に悩むL2-L3の総合建設コンサルに対し、Civil 3D-Revitの動的座標連携を提案。"},
+                            "CI04": {"dept": "土木設計", "phase": "土量計算と自動化", "title": "CI04 (土量計算と自動化): 土量計算の高速化・切盛バランス自動計算", "products": "Civil 3D (Grading Optimization)", "value_pitch": "サーフェス比較を用いた高精度土量計算。AI/アルゴリズムによる法面や敷地計画の土量切盛バランスの自動最適化設計。", "sales_hint": "大規模造成プロジェクトで土砂の搬出入コスト削減や最適な法面計画設計に悩むL2-L3顧客に、自動最適化ツールを提案。"},
+                            "CI05": {"dept": "土木設計", "phase": "CIMクラウド協調", "title": "CI05 (CIMクラウド協調): Civil 3Dチーム協調クラウド設計", "products": "Autodesk Collaboration for Civil 3D, ACC Docs", "value_pitch": "共通データ環境(CDE)によるCivil 3Dデータショートカットのクラウド共有。遠隔地のサブコンや別拠点と同期設計を実施します。", "sales_hint": "巨大な土木データをローカルサーバーやHDD移動でやり取りしているL2-L3企業に、クラウド上での線形データ参照同期設計を提案。"},
+                            "CI06": {"dept": "土木設計", "phase": "周辺住民・発注者説明", "title": "CI06 (周辺住民・発注者説明): 住民合意形成用の3Dビジュアルパッケージ", "products": "Autodesk InfraWorks", "value_pitch": "リアルな3D地形・構造物アニメーションを用いた住民説明会・発注者説明のスピード化。景観変化や交通影響をビジュアルで即座に伝達。", "sales_hint": "合意形成プロセスに時間がかかり着工が遅れがちなL2-L3のコンサルや自治体担当者に対し、3Dビジュアル合意形成を提案。"},
+                            "CI07": {"dept": "土木設計", "phase": "i-Constructionと点群", "title": "CI07 (i-Constructionと点群): ドローン点群からの出来形・土量検査", "products": "Autodesk ReCap Pro, Civil 3D", "value_pitch": "3Dレーザースキャン・ドローン点群データの高速処理と、Civil 3D地形サーフェスとの重ね合わせによるi-Construction出来形管理の自動化。", "sales_hint": "ICT土工の導入期にあり、点群データのハンドリングやCIM図面との重ね合わせに苦労している現場L3顧客にReCap Proを提案。"},
+                            "CI08": {"dept": "土木設計", "phase": "納品とデータ引渡", "title": "CI08 (納品とデータ引渡): CIM電子納品とアセットデータの連携", "products": "Civil 3D, Autodesk Tandem", "value_pitch": "3DデータによるCIM電子納品への対応、および設計・施工時のBIM/CIMメタデータを維持管理データベース（FM）へシームレスに引き渡します。", "sales_hint": "電子納品データ作成が手作業のファイリングで大変な企業や、アセット管理への3D連携を求める発注者L3-L4へ提案。"}
+                        },
+                        "製品設計・製造プロセスアセスメント (MFG - MF)": {
+                            "MF01": {"dept": "製品設計", "phase": "3D機械設計・BOM連携", "title": "MF01 (3D機械設計・BOM連携): Inventor詳細設計とBOM完全連動", "products": "Autodesk Inventor, Vault", "value_pitch": "3D CADモデルのパーツ構成と部品表(BOM)の完全同期。設計変更に伴う手入力でのBOM転記ミスや不整合を完全に防止します。", "sales_hint": "3D CADを使いつつBOMは手入力でExcel管理しているL2レベルの製造業に対し、設計-BOM自動連動プログラムを提案。"},
+                            "MF02": {"dept": "製品設計", "phase": "設計シミュレーション", "title": "MF02 (設計シミュレーション): 設計段階での強度・熱応力FEA解析", "products": "Inventor Nastran / Simulation", "value_pitch": "CAD統合型のFEA・有限要素法解析。設計変更の都度、同じCAD環境で動的・静的シミュレーションを実行し、試作回数を激減させます。", "sales_hint": "試作検証と再設計を何度も繰り返し開発期間が長期化しているL2顧客に対し、設計エンジニアが回す事前FEA解析を提案。"},
+                            "MF03": {"dept": "製品設計", "phase": "製品データ管理(PDM)", "title": "MF03 (製品データ管理(PDM)): Vaultによるリビジョン・承認自動統制", "products": "Autodesk Vault", "value_pitch": "リビジョンの厳密な世代管理、承認ワークフローのシステム統制、および重複設計（過去アセンブリの使い回し）の防止を実現します。", "sales_hint": "サーバー内のどれが最新の図面か分からなくなり、古い図面で製造をかけてしまった苦い経験のあるL2顧客にVaultを提案。"},
+                            "MF04": {"dept": "製品設計", "phase": "クラウドレビューと協調", "title": "MF04 (クラウドレビューと協調): Fusionクラウドによる取引先レビュー共有", "products": "Autodesk Fusion (Cloud)", "value_pitch": "取引先や製造部門とのセキュアな3D設計クラウドビュー。ブラウザ上でのマークアップやチャット形式でのリアルタイム設計変更レビューの実現。", "sales_hint": "取引先に図面を渡す際にPDF変換してメール送信しており、3Dの整合性確認に時間がかかるL2-L3企業にFusionの強みをアピール。"},
+                            "MF05": {"dept": "製品設計", "phase": "ジェネレーティブデザイン", "title": "MF05 (ジェネレーティブデザイン): AIによる軽量最適形状の自動生成", "products": "Autodesk Fusion (Generative Design)", "value_pitch": "設計条件（力・固定箇所・製法等）からAIが複数の最適な軽量化モデル案を自動生成。人間が思いつかない極限の材料・コスト削減を達成します。", "sales_hint": "製品の劇的な軽量化や材料費削減の壁に直面しているL3以上の高度製造業に対し、ジェネレーティブデザインの適用会を提案。"},
+                            "MF06": {"dept": "製品設計", "phase": "CAD/CAM統合と製造", "title": "MF06 (CAD/CAM統合と製造): CAD/CAM統合によるNCコード作成と自動再計算", "products": "Autodesk Fusion (CAM)", "value_pitch": "同一CAD環境でのCAMパス作成。設計変更が発生した瞬間、加工のツールパスも自動的に再計算・更新され、再設計の手間をゼロにします。", "sales_hint": "CADとCAMが別ソフトで、設計変更のたびにCAMオペレーターが再プログラムしている非効率な工場L2-L3にFusion CAMを提案。"},
+                            "MF07": {"dept": "製品設計", "phase": "iLogic・自動コンフィギュレーション", "title": "MF07 (iLogic・自動コンフィギュレーション): パラメータ自動構成ルール作成", "products": "Autodesk Inventor (iLogic)", "value_pitch": "アセンブリ・図面のパラメータ自動構成。仕様入力に応じてパーツが自動変形し、詳細設計図と帳票が一瞬で自動出力されます。", "sales_hint": "標準品のバリエーション変更（幅・高さ変更など）の受注対応で、毎回手動で図面を描き直しているL2-L3メーカーに最適の提案。"},
+                            "MF08": {"dept": "製品設計", "phase": "ECAD/MCAD協調設計", "title": "MF08 (ECAD/MCAD協調設計): 基板と筐体のリアルタイムオンライン3D干渉検証", "products": "Autodesk Fusion (ECAD/MCAD)", "value_pitch": "電子CAD基板設計とメカニカル筐体設計েরリアルタイムな3Dデータ同期。基板の干渉などを試作前にオンライン画面で検証・クリアします。", "sales_hint": "電子基板と筐体の干渉による設計やり直しが多い、または異なるツールでファイルやり取りしている電気・機械L2-L3企業へ提案。"}
+                        }
+                    }
+                    
+                    mapping_keys = list(all_mappings.keys())
+                    selected_map_key = mapping_keys[0]
+                    if selected_survey_type == "工場設計・プロダクトクラウド":
+                        selected_map_key = "工場設計・プロダクトクラウドアセスメント (Factory Cloud - FC)"
+                    elif selected_survey_type == "建築設計・施工 BIM":
+                        selected_map_key = "建築設計・施工 BIMアセスメント (AEC - AE)"
+                    elif selected_survey_type == "インフラ・土木設計 CIM":
+                        selected_map_key = "インフラ・土木設計 CDEアセスメント (Civil - CI)"
+                    elif selected_survey_type == "製品設計・開発":
+                        selected_map_key = "製品設計・製造プロセスアセスメント (MFG - MF)"
+                        
+                    selected_mapping_set = st.selectbox(
+                        "表示する提案マッピング分野の切り替え",
+                        options=mapping_keys,
+                        index=mapping_keys.index(selected_map_key),
+                        key="sales_console_mapping_set"
+                    )
+                    
+                    active_mapping = all_mappings[selected_mapping_set]
+                    for qid, info in active_mapping.items():
+                        st.markdown(f"**{qid}  {info['dept']} - {info['phase']}**")
+                        st.markdown(f"* {info['title']}")
+                        st.markdown(f"**提案対象製品:** `{info['products']}`")
+                        st.markdown(f"**価値訴求:** {info['value_pitch']}")
+                        st.markdown(f"**セールスヒント:** {info['sales_hint']}")
+                        st.markdown("---")
+
         else:
             if dash_pw != "":
                 st.error("パスワードが正しくありません。")
 
-### 🔧 Tab 3: 営業管理 ###
+###  Tab 3: 営業管理 ###
 if tab_admin:
     with tab_admin:
         st.header("営業担当用 カスタムアンケート発行管理")
@@ -1268,8 +1358,8 @@ if tab_admin:
                             "お客様の最大の課題箇所に対し、最適なAutodesk製品のデモ、または製品統合パッケージ（AEC Collection / PDMC）のご紹介ワークショップをオファーしてください。"
                         )
                         
-                        st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-top:15px; margin-bottom:5px;'>💡 AI推奨セールストーク ＆ 提案シナリオ</h5>", unsafe_allow_html=True)
-                        st.info(f"👉 **アプローチの切り口 (最大課題: {top_gap['qid']} [{top_gap['phase']}] - Gap: {top_gap['gap']})**\n\n{recommend_text}")
+                        st.markdown("<h5 style='color:#FFFFFF; font-weight:700; margin-top:15px; margin-bottom:5px;'> AI推奨セールストーク ＆ 提案シナリオ</h5>", unsafe_allow_html=True)
+                        st.info(f" **アプローチの切り口 (最大課題: {top_gap['qid']} [{top_gap['phase']}] - Gap: {top_gap['gap']})**\n\n{recommend_text}")
                     else:
                         st.write("回答データに有効なGapが存在しません。全体の成熟度は非常に高い状況です。")
         else:

@@ -76,14 +76,14 @@ st.sidebar.title("AI Trace Visualizer")
 st.sidebar.caption("Observing wrong doors, recoveries, and human rescues.")
 
 PAGES = [
-    "🛰️ Command Center",
+    " Command Center",
     "Timeline",
     "File path graph",
     "Sankey",
     "Heatmap",
     "Metrics detail",
     "Approvals & tasks",
-    "🔋 Agent Limits & Usage",
+    " Agent Limits & Usage",
     "Insights (passive)",
     "Provenance (passive)",
 ]
@@ -147,7 +147,7 @@ if auto_refresh:
 st.sidebar.divider()
 st.sidebar.markdown("### Reality Check")
 st.sidebar.caption("Is the AI lost? Push this to force a self-reflection.")
-if st.sidebar.button("🚨 Run Sanity Check", type="primary"):
+if st.sidebar.button(" Run Sanity Check", type="primary"):
     if run_sanity_check:
         st.session_state["sanity_prompt"] = run_sanity_check(lookback=5)
     else:
@@ -220,8 +220,8 @@ def _human_age(ts) -> str:
 
 
 # ---------- Command Center page ----------
-if page == "🛰️ Command Center":
-    st.title("🛰️ AI Coordination — Command Center")
+if page == " Command Center":
+    st.title(" AI Coordination — Command Center")
     st.caption("At-a-glance view of the Claude ↔ Antigravity (Gemini) loop. Quiet means quiet.")
 
     inbox_claude_df = load_inbox(INBOX_CLAUDE, inbox_name="claude") if INBOX_CLAUDE.exists() else pd.DataFrame()
@@ -268,7 +268,7 @@ if page == "🛰️ Command Center":
             st.markdown(
                 "<div style='padding:18px;border-radius:8px;background:#e8f5e9;"
                 "border-left:6px solid #2e7d32;font-size:22px;font-weight:600;'>"
-                "✅ 両者アイドル</div>",
+                " 両者アイドル</div>",
                 unsafe_allow_html=True,
             )
     with age_col:
@@ -287,12 +287,12 @@ if page == "🛰️ Command Center":
     left, right = st.columns([1, 1])
 
     with left:
-        st.subheader("🔴 人間の判断キュー")
+        st.subheader(" 人間の判断キュー")
         if review_queue.empty:
             st.markdown(
                 "<div style='padding:14px;border-radius:8px;background:#e8f5e9;"
                 "border-left:6px solid #2e7d32;font-weight:600;'>"
-                "✅ 人間の判断待ちはありません</div>",
+                " 人間の判断待ちはありません</div>",
                 unsafe_allow_html=True,
             )
             st.caption("ここが空ならヒデナリは何もしなくていい。")
@@ -314,7 +314,7 @@ if page == "🛰️ Command Center":
                 )
 
     with right:
-        st.subheader("💬 最近のメッセージ")
+        st.subheader(" 最近のメッセージ")
         combined = pd.concat([inbox_claude_df, inbox_gemini_df], ignore_index=True)
         if combined.empty or "timestamp" not in combined.columns:
             st.info("inbox メッセージはまだありません。")
@@ -327,7 +327,7 @@ if page == "🛰️ Command Center":
                 content = str(r.get("content", "") or "")
                 snippet = content[:100] + ("…" if len(content) > 100 else "")
                 ts_age = _human_age(r.get("timestamp"))
-                review_icon = "🔴 " if _truthy(r.get("needs_review")) else ""
+                review_icon = " " if _truthy(r.get("needs_review")) else ""
                 st.markdown(
                     f"<div style='padding:8px 10px;margin-bottom:6px;border-radius:6px;"
                     f"background:#f5f5f5;border-left:3px solid #888;'>"
@@ -339,7 +339,7 @@ if page == "🛰️ Command Center":
                 )
 
     # Tasks & metrics (collapsed)
-    with st.expander("📊 タスク & メトリクス", expanded=False):
+    with st.expander(" タスク & メトリクス", expanded=False):
         m_cc = calculate_metrics(task_df)
         ev_col, det_col, lat_col = st.columns(3)
         ev_col.metric("Events (selected log)", m_cc["total_events"])
@@ -395,7 +395,7 @@ if page == "🛰️ Command Center":
 
     # ---- Wake Lock (active) ----
     st.divider()
-    st.subheader("🔒 Wake Lock — current decision")
+    st.subheader(" Wake Lock — current decision")
     st.caption("Live evaluation of bridge_status.json via scripts/wake_lock.py. "
                "Shows WHY an agent is sleeping right now.")
     import sys as _sys, json as _json
@@ -420,7 +420,7 @@ if page == "🛰️ Command Center":
                 d = _wake_eval(_bs, agent)
                 bg = "#e8f5e9" if d.allowed else "#fff8e1"
                 border = "#2e7d32" if d.allowed else "#f9a825"
-                icon = "🟢 ALLOWED" if d.allowed else "🔒 SLEEPING"
+                icon = "🟢 ALLOWED" if d.allowed else " SLEEPING"
                 hold = d.hold_reason or "—"
                 col.markdown(
                     f"<div style='padding:12px;border-radius:8px;"
@@ -487,7 +487,7 @@ if page == "🛰️ Command Center":
     st_autorefresh(interval=refresh_interval, key="command_center_refresh")
     st.caption(
         f"自動更新: {refresh_interval // 1000}秒ごと"
-        f"{'（🔴 人間の判断キューに項目あり — 高頻度モード）' if not review_queue.empty else ''}"
+        f"{'（ 人間の判断キューに項目あり — 高頻度モード）' if not review_queue.empty else ''}"
     )
 
     st.stop()
@@ -772,7 +772,7 @@ elif page == "Provenance (passive)":
         "Activate when there is a concrete provenance dispute the team needs to resolve."
     )
 
-elif page == "🔋 Agent Limits & Usage":
+elif page == " Agent Limits & Usage":
     from agent_usage_page import render_page
     render_page()
 
