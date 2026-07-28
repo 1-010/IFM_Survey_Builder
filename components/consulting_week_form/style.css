@@ -71,6 +71,39 @@ button {
   text-align: right;
 }
 
+.header-actions {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.language-toggle {
+  display: inline-flex;
+  border: 1px solid var(--line);
+}
+
+.language-toggle button {
+  min-width: 34px;
+  min-height: 30px;
+  padding: 4px 7px;
+  border: 0;
+  background: var(--black);
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.language-toggle button[aria-pressed="true"] {
+  background: var(--yellow);
+  color: var(--black);
+}
+
+.language-toggle button:focus-visible {
+  outline: 2px solid var(--yellow);
+  outline-offset: 2px;
+}
+
 h1 {
   margin: 22px 0 8px;
   max-width: 760px;
@@ -672,7 +705,11 @@ input[type="range"]:disabled {
   }
 
   .event-kicker {
-    font-size: 10px;
+    display: none;
+  }
+
+  .header-actions {
+    margin-left: auto;
   }
 
   h1 {

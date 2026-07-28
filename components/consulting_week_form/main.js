@@ -6,6 +6,7 @@
   const ANSWERS_KEY = "consulting_week_2026_answers";
   const DIRTY_KEY = "consulting_week_2026_dirty";
   const ACTIVE_PART_KEY = "consulting_week_2026_active_part";
+  const LANGUAGE_KEY = "consulting_week_2026_language";
   const MIN_SYNC_INTERVAL_MS = 5000;
   const SYNC_DEBOUNCE_MS = 1000;
   const AUTO_ADVANCE_DELAY_MS = 1800;
@@ -17,6 +18,7 @@
   let answers = {};
   let dirty = new Set();
   let activePart = Number(localStorage.getItem(ACTIVE_PART_KEY) || "1");
+  let language = localStorage.getItem(LANGUAGE_KEY) === "en" ? "en" : "ja";
   let expanded = new Set();
   let initialized = false;
   let hydrateSent = false;
@@ -28,6 +30,76 @@
   let syncTimer = null;
   let pendingScrollSessionId = "";
   const advanceTimers = new Map();
+
+  const COPY = {
+    ja: {
+      purpose: "各セッションについて、タイトルから抱いた期待と、実際に聞いた後の実感を記録する簡素なフォームです。登壇者のランキングを目的としたものではありません。聞いていない発表はスキップできます。",
+      autoSaveLabel: "自動保存について",
+      noSubmit: "Submitボタンはありません",
+      autoSaveBody: "入力内容はすぐにこの端末へ保存され、一定間隔で自動同期されます。同じ端末・ブラウザから開くと続きから回答できます。",
+      dirty: "端末に保存済み",
+      skipped: "聞いていない",
+      answered: "回答済み",
+      partial: "入力途中",
+      unanswered: "未回答",
+      offline: "オフライン・端末保存済み",
+      retrying: "同期を再試行します",
+      synced: "同期済み",
+      checking: "前回回答を確認中",
+      expectation: "タイトルからの期待",
+      actual: "聞いた後の実感",
+      sliderHint: "中央の丸を動かして採点",
+      sliderAria: "未評価・中央位置",
+      skip: "この発表は聞いていない",
+      savePending: "端末に保存済み・同期待ち",
+      saveSynced: "サーバー同期済み",
+      savePrompt: "入力すると端末へ保存されます",
+      progress: "回答済み",
+      eventNav: "イベント構成",
+      partNav: "部を切り替える",
+      allComplete: "16セッションの入力が完了しました",
+      noSendNeeded: "送信操作は必要ありません",
+      completeSynced: "すべてサーバーへ同期済みです。これで完了です。画面を閉じて大丈夫です。",
+      completePending: "回答は端末へ保存済みです。上の表示が「同期済み」になれば、画面を閉じて大丈夫です。",
+      incompleteBody: "入力のたびに端末へ保存され、変更分だけがまとめて同期されます。途中で閉じても同じブラウザから続けられます。",
+      privacy: "氏名、メールアドレス、会社名、自由記述は収集しません。回答者は他の回答や集計結果を閲覧できません。",
+    },
+    en: {
+      purpose: "Record your expectations from each session title and how the session felt afterward. This is not a presenter ranking. Skip any session you did not attend.",
+      autoSaveLabel: "About automatic saving",
+      noSubmit: "No Submit button needed",
+      autoSaveBody: "Your answers are saved on this device immediately and synced automatically. Reopen this page in the same browser to continue.",
+      dirty: "Saved on this device",
+      skipped: "Not attended",
+      answered: "Answered",
+      partial: "In progress",
+      unanswered: "Not answered",
+      offline: "Offline · saved on device",
+      retrying: "Sync will retry",
+      synced: "Synced",
+      checking: "Checking previous answers",
+      expectation: "Expectation from the title",
+      actual: "After-session impression",
+      sliderHint: "Move the center circle to rate",
+      sliderAria: "Not rated · center position",
+      skip: "I did not attend this session",
+      savePending: "Saved on device · waiting to sync",
+      saveSynced: "Synced to server",
+      savePrompt: "Your input will be saved on this device",
+      progress: "answered",
+      eventNav: "Event sections",
+      partNav: "Switch section",
+      allComplete: "All 16 sessions are complete",
+      noSendNeeded: "No submission action is needed",
+      completeSynced: "Everything is synced. You may close this page.",
+      completePending: "Your answers are saved on this device. Please wait until the status shows “Synced” before closing.",
+      incompleteBody: "Each change is saved on this device and synced automatically. You can close the page and continue later in the same browser.",
+      privacy: "We do not collect names, email addresses, company names, or free-text comments. Respondents cannot view other answers or aggregate results.",
+    },
+  };
+
+  const t = (key) => COPY[language][key] || COPY.ja[key] || key;
+  const partName = (part) => language === "en" ? `Part ${part}` : `第${part}部`;
 
   const postStreamlit = (type, payload = {}) => {
     window.parent.postMessage(
@@ -214,7 +286,9 @@
     sending = false;
     pendingActionId = "";
     if (!response.ok) {
-      syncError = response.error || "同期できませんでした。";
+      syncError = language === "en"
+        ? "Could not sync. Your answers remain on this device."
+        : (response.error || "同期できませんでした。");
       renderApp();
       scheduleSync(10000);
       return;
@@ -241,6 +315,7 @@
       type: "hydrate",
       action_id: id,
       respondent_id: respondentId,
+      language,
     });
     renderApp();
   };
@@ -285,6 +360,7 @@
       action_id: id,
       respondent_id: respondentId,
       entries,
+      language,
     });
     renderApp();
   };
@@ -479,11 +555,11 @@
 
   const statusForCard = (sessionId) => {
     const answer = answers[sessionId];
-    if (dirty.has(sessionId)) return { text: "端末に保存済み", kind: "dirty" };
-    if (answer.skipped) return { text: "聞いていない", kind: "complete" };
-    if (isComplete(answer)) return { text: "回答済み", kind: "complete" };
-    if (isPartial(answer)) return { text: "入力途中", kind: "partial" };
-    return { text: "未回答", kind: "" };
+    if (dirty.has(sessionId)) return { text: t("dirty"), kind: "dirty" };
+    if (answer.skipped) return { text: t("skipped"), kind: "complete" };
+    if (isComplete(answer)) return { text: t("answered"), kind: "complete" };
+    if (isPartial(answer)) return { text: t("partial"), kind: "partial" };
+    return { text: t("unanswered"), kind: "" };
   };
 
   const globalStatus = () => {
@@ -555,7 +631,7 @@
             class="${unanswered ? "unanswered" : ""}"
             data-session="${escapeHtml(sessionId)}"
             data-field="${field}"
-            aria-valuetext="${unanswered ? "未評価・中央位置" : value}"
+            aria-valuetext="${unanswered ? escapeHtml(t("sliderAria")) : value}"
             ${answer.skipped ? "disabled" : ""}
           >
           <span aria-hidden="true">10</span>
@@ -563,7 +639,7 @@
         <span class="slider-hint"
           data-hint-for="${escapeHtml(sessionId)}-${field}"
           ${unanswered ? "" : "hidden"}>
-          中央の丸を動かして採点
+          ${escapeHtml(t("sliderHint"))}
         </span>
       </div>
     `;
@@ -579,8 +655,8 @@
       ? "dirty"
       : (hasSavedContent ? "synced" : "");
     const cardSaveText = dirty.has(sessionId)
-      ? "端末に保存済み・同期待ち"
-      : (hasSavedContent ? "サーバー同期済み" : "入力すると端末へ保存されます");
+      ? t("savePending")
+      : (hasSavedContent ? t("saveSynced") : t("savePrompt"));
 
     return `
       <article class="session-card"
@@ -594,7 +670,9 @@
           aria-controls="body-${escapeHtml(sessionId)}">
           <span>
             <span class="session-order">SESSION ${session.order}</span>
-            <span class="session-title">${escapeHtml(session.title)}</span>
+            <span class="session-title">${escapeHtml(
+              language === "en" ? (session.title_en || session.title) : session.title
+            )}</span>
             <span class="session-meta">
               <span>${escapeHtml(session.presenter)}</span>
               <span>${timeValue(session.start_at)}–${timeValue(session.end_at)}</span>
@@ -607,13 +685,13 @@
         </button>
         ${isExpanded ? `
           <div class="card-body" id="body-${escapeHtml(sessionId)}">
-            ${sliderHtml(sessionId, "expectation_score", "タイトルからの期待", answer)}
-            ${sliderHtml(sessionId, "actual_score", "聞いた後の実感", answer)}
+            ${sliderHtml(sessionId, "expectation_score", t("expectation"), answer)}
+            ${sliderHtml(sessionId, "actual_score", t("actual"), answer)}
             <label class="skip-row">
               <input type="checkbox"
                 data-skip="${escapeHtml(sessionId)}"
                 ${answer.skipped ? "checked" : ""}>
-              <span>この発表は聞いていない</span>
+              <span>${escapeHtml(t("skip"))}</span>
             </label>
             <div class="card-save-state ${cardSaveClass}">
               ${cardSaveText}
@@ -635,53 +713,55 @@
     const allComplete = total.complete === total.total;
     const safelySynced = allComplete && !dirty.size && !sending && !syncError;
     const compactSyncLabel = !navigator.onLine
-      ? "オフライン・端末保存済み"
+      ? t("offline")
       : syncError
-        ? "同期を再試行します"
+        ? t("retrying")
         : (dirty.size || sending)
-          ? "端末に保存済み"
+          ? t("dirty")
           : renderArgs?.server_bundle?.loaded
-            ? "同期済み"
-            : "前回回答を確認中";
+            ? t("synced")
+            : t("checking");
 
     app.innerHTML = `
       <div class="shell">
         <header class="brand-header">
           <img class="brand-logo" src="${escapeHtml(logoDataUri)}" alt="Autodesk">
-          <span class="event-kicker">Internal Event · 28 JUL 2026</span>
+          <span class="header-actions">
+            <span class="event-kicker">Internal Event · 28 JUL 2026</span>
+            <span class="language-toggle" role="group" aria-label="Language">
+              <button type="button" data-language="ja"
+                aria-pressed="${language === "ja"}">JP</button>
+              <button type="button" data-language="en"
+                aria-pressed="${language === "en"}">EN</button>
+            </span>
+          </span>
         </header>
 
         <h1>${escapeHtml(eventConfig.display_name)}</h1>
-        <p class="purpose">
-          各セッションについて、タイトルから抱いた期待と、実際に聞いた後の実感を記録する簡素なフォームです。
-          登壇者のランキングを目的としたものではありません。聞いていない発表はスキップできます。
-        </p>
+        <p class="purpose">${escapeHtml(t("purpose"))}</p>
 
-        <section class="auto-save-note" aria-label="自動保存について">
+        <section class="auto-save-note" aria-label="${escapeHtml(t("autoSaveLabel"))}">
           <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M5 12.5l4 4L19 6.5" stroke="currentColor" stroke-width="2.2"
               stroke-linecap="square" stroke-linejoin="miter"/>
             <path d="M3 3h18v18H3z" stroke="currentColor" stroke-width="1.4"/>
           </svg>
           <div>
-            <strong>Submitボタンはありません</strong>
-            <p>
-              入力内容はすぐにこの端末へ保存され、一定間隔で自動同期されます。
-              同じ端末・ブラウザから開くと続きから回答できます。
-            </p>
+            <strong>${escapeHtml(t("noSubmit"))}</strong>
+            <p>${escapeHtml(t("autoSaveBody"))}</p>
           </div>
         </section>
 
         <section class="answer-summary" data-state="${global.state}" aria-live="polite">
           <span>${compactSyncLabel}</span>
-          <span>${total.complete} / ${total.total} 回答済み</span>
+          <span>${total.complete} / ${total.total} ${escapeHtml(t("progress"))}</span>
         </section>
 
         <div class="progress-track" aria-hidden="true">
           <div class="progress-fill" style="width:${(total.complete / total.total) * 100}%"></div>
         </div>
 
-        <nav class="part-tabs" role="tablist" aria-label="イベント構成">
+        <nav class="part-tabs" role="tablist" aria-label="${escapeHtml(t("eventNav"))}">
           ${[1, 2, 3].map((part) => {
             const progress = progressForPart(part);
             return `
@@ -690,46 +770,45 @@
                 role="tab"
                 data-part="${part}"
                 aria-selected="${part === activePart}">
-                <span class="part-name">第${part}部</span>
+                <span class="part-name">${partName(part)}</span>
                 <span class="part-count">${progress.complete} / ${progress.total}</span>
               </button>
             `;
           }).join("")}
         </nav>
 
-        <section role="tabpanel" aria-label="第${activePart}部">
+        <section role="tabpanel" aria-label="${partName(activePart)}">
           <div class="part-heading">
-            <h2>第${activePart}部</h2>
-            <span>${partProgress.complete} / ${partProgress.total} 回答済み</span>
+            <h2>${partName(activePart)}</h2>
+            <span>${partProgress.complete} / ${partProgress.total} ${escapeHtml(t("progress"))}</span>
           </div>
           <div class="session-list">
             ${activeSessions.map(cardHtml).join("")}
           </div>
-          <nav class="part-bottom-nav" aria-label="部を切り替える">
+          <nav class="part-bottom-nav" aria-label="${escapeHtml(t("partNav"))}">
             ${[1, 2, 3].map((part) => `
               <button type="button"
                 data-part="${part}"
                 ${part === activePart ? "disabled" : ""}>
-                第${part}部
+                ${partName(part)}
               </button>
             `).join("")}
           </nav>
         </section>
 
         <section class="completion-card ${safelySynced ? "complete" : ""}">
-          <h3>${allComplete ? "16セッションの入力が完了しました" : "送信操作は必要ありません"}</h3>
+          <h3>${allComplete ? t("allComplete") : t("noSendNeeded")}</h3>
           <p>
             ${safelySynced
-              ? "すべてサーバーへ同期済みです。これで完了です。画面を閉じて大丈夫です。"
+              ? t("completeSynced")
               : allComplete
-                ? "回答は端末へ保存済みです。上の表示が「同期済み」になれば、画面を閉じて大丈夫です。"
-                : "入力のたびに端末へ保存され、変更分だけがまとめて同期されます。途中で閉じても同じブラウザから続けられます。"}
+                ? t("completePending")
+                : t("incompleteBody")}
           </p>
         </section>
 
         <p class="footer-note">
-          氏名、メールアドレス、会社名、自由記述は収集しません。
-          回答者は他の回答や集計結果を閲覧できません。
+          ${escapeHtml(t("privacy"))}
         </p>
       </div>
     `;
@@ -748,6 +827,14 @@
   };
 
   const bindInteractions = () => {
+    document.querySelectorAll("[data-language]").forEach((button) => {
+      button.addEventListener("click", () => {
+        language = button.dataset.language === "en" ? "en" : "ja";
+        localStorage.setItem(LANGUAGE_KEY, language);
+        document.documentElement.lang = language;
+        renderApp();
+      });
+    });
     document.querySelectorAll("[data-part]").forEach((button) => {
       button.addEventListener("click", () => {
         activePart = Number(button.dataset.part);

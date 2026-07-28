@@ -45,6 +45,7 @@ def test_event_config_has_expected_date_order_and_part_sizes(config):
     assert [session["part"] for session in config["sessions"]].count(1) == 5
     assert [session["part"] for session in config["sessions"]].count(2) == 5
     assert [session["part"] for session in config["sessions"]].count(3) == 6
+    assert all(session.get("title_en") for session in config["sessions"])
 
 
 def test_tbc_sessions_are_explicitly_marked(config):
@@ -195,7 +196,7 @@ def test_route_runs_before_legacy_question_loader():
     )
     assert deployed_entrypoint.index(
         'if event_param == "consulting-week-2026"'
-    ) < deployed_entrypoint.index("import pandas as pd")
+    ) < deployed_entrypoint.index("q_df, active_survey_id = get_active_questions()")
     assert "configure_page=False" in deployed_entrypoint
 
 
@@ -249,3 +250,15 @@ def test_unanswered_sliders_show_a_neutral_center_handle():
     assert "opacity: 0" not in styles
     assert "#38abdf" not in styles
     assert "#63d7c5" not in styles
+
+
+def test_frontend_supports_persistent_japanese_and_english_modes():
+    frontend = (
+        ROOT / "components" / "consulting_week_form" / "main.js"
+    ).read_text(encoding="utf-8")
+    backend = (ROOT / "consulting_week.py").read_text(encoding="utf-8")
+    assert "consulting_week_2026_language" in frontend
+    assert 'data-language="ja"' in frontend
+    assert 'data-language="en"' in frontend
+    assert "session.title_en || session.title" in frontend
+    assert "Temporarily syncing your answers" in backend

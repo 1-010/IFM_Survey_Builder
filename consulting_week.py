@@ -316,10 +316,14 @@ def _handle_component_action(
         raise ValueError("同期が速すぎます。少し待って再試行してください。")
     st.session_state.cw_last_sync_monotonic = now
 
-    sending_notice = st.toast(
-        "ご回答を一時送信中\n\nそのまま回答を続けられます。",
-        icon="☁️",
+    language = str(action.get("language", "ja")).lower()
+    notice_text = (
+        "Temporarily syncing your answers\n\n"
+        "You can continue answering."
+        if language == "en"
+        else "ご回答を一時送信中\n\nそのまま回答を続けられます。"
     )
+    sending_notice = st.toast(notice_text, icon="☁️")
     notice_started_at = time.monotonic()
     try:
         result = _sync_response_batch(
