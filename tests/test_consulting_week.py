@@ -213,10 +213,13 @@ def test_frontend_uses_local_storage_debounce_and_batched_dirty_entries():
     assert 'RESPONDENT_KEY = "consulting_week_2026_respondent_id"' in source
     assert "MIN_SYNC_INTERVAL_MS = 5000" in source
     assert "SYNC_DEBOUNCE_MS = 1000" in source
+    assert "AUTO_ADVANCE_DELAY_MS = 1800" in source
     assert "dirtyEntries" in source
     assert "visibilitychange" in source
     assert 'window.addEventListener("online"' in source
     assert "advanceToNextIncomplete" in source
+    assert "scheduleAdvance" in source
+    assert "primeRangeFromPointer" in source
 
 
 def test_frontend_explains_submitless_completion_and_uses_official_logo():
@@ -230,3 +233,19 @@ def test_frontend_explains_submitless_completion_and_uses_official_logo():
     backend = (ROOT / "consulting_week.py").read_text(encoding="utf-8")
     assert "ご回答を一時送信中" in backend
     assert "sending_notice.empty()" in backend
+
+
+def test_unanswered_sliders_show_a_neutral_center_handle():
+    frontend = (
+        ROOT / "components" / "consulting_week_form" / "main.js"
+    ).read_text(encoding="utf-8")
+    styles = (
+        ROOT / "components" / "consulting_week_form" / "style.css"
+    ).read_text(encoding="utf-8")
+    assert '${unanswered ? "-" : value}' in frontend
+    assert "中央の丸を動かして採点" in frontend
+    assert "value=\"${unanswered ? 5 : value}\"" in frontend
+    assert "input[type=\"range\"].unanswered::-webkit-slider-thumb" in styles
+    assert "opacity: 0" not in styles
+    assert "#38abdf" not in styles
+    assert "#63d7c5" not in styles

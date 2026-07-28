@@ -8,6 +8,7 @@
   const ACTIVE_PART_KEY = "consulting_week_2026_active_part";
   const MIN_SYNC_INTERVAL_MS = 5000;
   const SYNC_DEBOUNCE_MS = 1000;
+  const AUTO_ADVANCE_DELAY_MS = 1800;
 
   let renderArgs = null;
   let eventConfig = null;
@@ -26,6 +27,7 @@
   let lastServerAttempt = 0;
   let syncTimer = null;
   let pendingScrollSessionId = "";
+  const advanceTimers = new Map();
 
   const postStreamlit = (type, payload = {}) => {
     window.parent.postMessage(
@@ -331,6 +333,37 @@
     pendingScrollSessionId = nextIncomplete.session_id;
   };
 
+  const cancelScheduledAdvance = (sessionId) => {
+    const timer = advanceTimers.get(sessionId);
+    if (timer) window.clearTimeout(timer);
+    advanceTimers.delete(sessionId);
+  };
+
+  const scheduleAdvance = (sessionId) => {
+    cancelScheduledAdvance(sessionId);
+    const answer = answers[sessionId];
+    if (!isComplete(answer)) return;
+    const expectedUpdatedAt = answer.client_updated_at;
+    const timer = window.setTimeout(() => {
+      advanceTimers.delete(sessionId);
+      const session = eventConfig.sessions.find(
+        (candidate) => candidate.session_id === sessionId,
+      );
+      if (
+        !session
+        || activePart !== session.part
+        || !expanded.has(sessionId)
+        || !isComplete(answers[sessionId])
+        || answers[sessionId].client_updated_at !== expectedUpdatedAt
+      ) {
+        return;
+      }
+      advanceToNextIncomplete(sessionId);
+      renderApp();
+    }, AUTO_ADVANCE_DELAY_MS);
+    advanceTimers.set(sessionId, timer);
+  };
+
   const updateSlider = (
     sessionId,
     field,
@@ -344,9 +377,11 @@
     const timestampField = field === "expectation_score"
       ? "expectation_updated_at"
       : "actual_updated_at";
-    answer[field] = value;
-    answer[timestampField] = nowIso();
-    markChanged(sessionId);
+    if (answer[field] !== value) {
+      answer[field] = value;
+      answer[timestampField] = nowIso();
+      markChanged(sessionId);
+    }
 
     const range = document.querySelector(
       `input[data-session="${CSS.escape(sessionId)}"][data-field="${field}"]`,
@@ -354,14 +389,49 @@
     const valueNode = document.querySelector(
       `[data-value-for="${CSS.escape(sessionId)}-${field}"]`,
     );
+    const hintNode = document.querySelector(
+      `[data-hint-for="${CSS.escape(sessionId)}-${field}"]`,
+    );
     if (range) range.classList.remove("unanswered");
-    if (valueNode) valueNode.textContent = String(value);
-    if (finalChange) {
-      if (!wasComplete && isComplete(answer)) {
-        advanceToNextIncomplete(sessionId);
-      }
-      renderApp();
+    if (range) range.setAttribute("aria-valuetext", String(value));
+    if (valueNode) {
+      valueNode.textContent = String(value);
+      valueNode.classList.remove("unanswered");
     }
+    if (hintNode) hintNode.hidden = true;
+    if (finalChange) {
+      if (isComplete(answer)) scheduleAdvance(sessionId);
+      if (!wasComplete && isComplete(answer)) renderApp();
+    }
+  };
+
+  const primeRangeFromPointer = (range, event) => {
+    if (
+      range.disabled
+      || (event.button !== undefined && event.button !== 0)
+    ) {
+      return;
+    }
+    const bounds = range.getBoundingClientRect();
+    if (!bounds.width) return;
+    const ratio = Math.min(
+      1,
+      Math.max(0, (event.clientX - bounds.left) / bounds.width),
+    );
+    const minimum = Number(range.min);
+    const maximum = Number(range.max);
+    const step = Number(range.step) || 1;
+    const rawValue = minimum + ratio * (maximum - minimum);
+    const nextValue = Math.round(rawValue / step) * step;
+    range.value = String(
+      Math.min(maximum, Math.max(minimum, nextValue)),
+    );
+    updateSlider(
+      range.dataset.session,
+      range.dataset.field,
+      range.value,
+      false,
+    );
   };
 
   const toggleSkipped = (sessionId, checked) => {
@@ -468,9 +538,9 @@
           <label class="slider-label" for="${escapeHtml(sessionId)}-${field}">
             ${escapeHtml(label)}
           </label>
-          <span class="slider-value"
+          <span class="slider-value ${unanswered ? "unanswered" : ""}"
             data-value-for="${escapeHtml(sessionId)}-${field}">
-            ${unanswered ? "未回答" : value}
+            ${unanswered ? "-" : value}
           </span>
         </div>
         <div class="slider-scale">
@@ -485,11 +555,16 @@
             class="${unanswered ? "unanswered" : ""}"
             data-session="${escapeHtml(sessionId)}"
             data-field="${field}"
-            aria-valuetext="${unanswered ? "未回答" : value}"
+            aria-valuetext="${unanswered ? "未評価・中央位置" : value}"
             ${answer.skipped ? "disabled" : ""}
           >
           <span aria-hidden="true">10</span>
         </div>
+        <span class="slider-hint"
+          data-hint-for="${escapeHtml(sessionId)}-${field}"
+          ${unanswered ? "" : "hidden"}>
+          中央の丸を動かして採点
+        </span>
       </div>
     `;
   };
@@ -712,13 +787,11 @@
         range.dataset.completeBefore = String(
           isComplete(answers[range.dataset.session]),
         );
+        range.dataset.interactionFinalized = "false";
       };
-      range.addEventListener("pointerdown", rememberCompletion);
-      range.addEventListener("keydown", rememberCompletion);
-      range.addEventListener("input", () => {
-        updateSlider(range.dataset.session, range.dataset.field, range.value, false);
-      });
-      range.addEventListener("change", () => {
+      const finalizeInteraction = () => {
+        if (range.dataset.interactionFinalized === "true") return;
+        range.dataset.interactionFinalized = "true";
         const wasComplete = range.dataset.completeBefore === "true";
         delete range.dataset.completeBefore;
         updateSlider(
@@ -728,7 +801,21 @@
           true,
           wasComplete,
         );
+      };
+      range.addEventListener("pointerdown", rememberCompletion);
+      range.addEventListener("pointerdown", (event) => {
+        cancelScheduledAdvance(range.dataset.session);
+        primeRangeFromPointer(range, event);
       });
+      range.addEventListener("pointerup", finalizeInteraction);
+      range.addEventListener("keydown", rememberCompletion);
+      range.addEventListener("keydown", () => {
+        cancelScheduledAdvance(range.dataset.session);
+      });
+      range.addEventListener("input", () => {
+        updateSlider(range.dataset.session, range.dataset.field, range.value, false);
+      });
+      range.addEventListener("change", finalizeInteraction);
     });
 
     document.querySelectorAll("[data-skip]").forEach((checkbox) => {

@@ -7,8 +7,8 @@
   --muted: #b4b4ab;
   --white: #fff;
   --yellow: #ffff00;
-  --blue: #38abdf;
-  --cyan: #63d7c5;
+  --gray-strong: #8a8a84;
+  --gray-soft: #666;
   --orange: #ffc26a;
   --red: #ff8a8a;
   --radius: 4px;
@@ -155,12 +155,12 @@ h1 {
 }
 
 .sync-banner[data-state="syncing"] .sync-dot {
-  background: var(--blue);
+  background: var(--gray-strong);
   animation: pulse 1s ease-in-out infinite;
 }
 
 .sync-banner[data-state="synced"] .sync-dot {
-  background: var(--cyan);
+  background: var(--muted);
 }
 
 .sync-banner[data-state="error"] .sync-dot,
@@ -334,7 +334,7 @@ h1 {
 }
 
 .session-card[data-complete="true"] {
-  border-color: #3e6861;
+  border-color: var(--gray-soft);
 }
 
 .session-card[data-dirty="true"] {
@@ -408,8 +408,8 @@ h1 {
 }
 
 .status-chip.complete {
-  border-color: #3e6861;
-  color: var(--cyan);
+  border-color: var(--gray-soft);
+  color: var(--muted);
 }
 
 .status-chip.partial,
@@ -465,6 +465,10 @@ h1 {
   text-align: right;
 }
 
+.slider-value.unanswered {
+  color: var(--muted);
+}
+
 .slider-scale {
   display: grid;
   grid-template-columns: 18px 1fr 24px;
@@ -482,18 +486,19 @@ input[type="range"] {
   -webkit-appearance: none;
   background: transparent;
   cursor: pointer;
+  touch-action: pan-y;
 }
 
 input[type="range"]::-webkit-slider-runnable-track {
   height: 6px;
   border-radius: 0;
-  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  background: linear-gradient(90deg, #555, var(--gray-strong));
 }
 
 input[type="range"]::-moz-range-track {
   height: 6px;
   border-radius: 0;
-  background: linear-gradient(90deg, var(--blue), var(--cyan));
+  background: linear-gradient(90deg, #555, var(--gray-strong));
 }
 
 input[type="range"]::-webkit-slider-thumb {
@@ -526,11 +531,28 @@ input[type="range"].unanswered::-moz-range-track {
 }
 
 input[type="range"].unanswered::-webkit-slider-thumb {
-  opacity: 0;
+  border: 2px solid var(--muted);
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--black);
 }
 
 input[type="range"].unanswered::-moz-range-thumb {
-  opacity: 0;
+  border: 2px solid var(--muted);
+  background: var(--surface);
+  box-shadow: 0 0 0 2px var(--black);
+}
+
+.slider-hint {
+  display: block;
+  margin: -2px 31px 0 25px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.3;
+  text-align: center;
+}
+
+.slider-hint[hidden] {
+  display: none;
 }
 
 input[type="range"]:focus-visible {
@@ -587,7 +609,7 @@ input[type="range"]:disabled {
 }
 
 .card-save-state.synced {
-  color: var(--cyan);
+  color: var(--muted);
 }
 
 .completion-card {
@@ -599,7 +621,7 @@ input[type="range"]:disabled {
 }
 
 .completion-card.complete {
-  border-left-color: var(--cyan);
+  border-left-color: var(--gray-strong);
 }
 
 .completion-card h3 {
