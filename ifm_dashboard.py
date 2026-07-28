@@ -6,15 +6,34 @@ st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
 # 安全にクエリパラメータを取得（新旧バージョン互換性ハック）
 brand_param = None
 app_param = None
+event_param = None
+view_param = None
 try:
     brand_param = st.query_params.get("brand")
     app_param = st.query_params.get("app")
+    event_param = st.query_params.get("event")
+    view_param = st.query_params.get("view", "respond")
 except AttributeError:
     try:
         brand_param = st.experimental_get_query_params().get("brand", [None])[0]
         app_param = st.experimental_get_query_params().get("app", [None])[0]
+        event_param = st.experimental_get_query_params().get("event", [None])[0]
+        view_param = st.experimental_get_query_params().get(
+            "view", ["respond"]
+        )[0]
     except:
         pass
+
+# The deployed Streamlit app enters through this file. Route the event before
+# any legacy IFM data loaders run so anonymous event records stay isolated.
+if event_param == "consulting-week-2026":
+    from consulting_week import render_consulting_week
+
+    render_consulting_week(
+        view=str(view_param or "respond").lower(),
+        configure_page=False,
+    )
+    st.stop()
 
 # URLクエリに brand=autodesk がある場合は、該当する Autodesk版アセスメントへルーティング
 if brand_param == "autodesk":

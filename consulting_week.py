@@ -576,11 +576,14 @@ def _render_admin_view(config: dict[str, Any]) -> None:
     )
 
 
-def render_consulting_week(view: str = "respond") -> None:
-    st.set_page_config(
-        page_title="Consulting Week Session Feedback",
-        layout="wide",
-    )
+def render_consulting_week(
+    view: str = "respond", *, configure_page: bool = True
+) -> None:
+    if configure_page:
+        st.set_page_config(
+            page_title="Consulting Week Session Feedback",
+            layout="wide",
+        )
     config = _event_config()
     if view == "admin":
         _render_admin_view(config)

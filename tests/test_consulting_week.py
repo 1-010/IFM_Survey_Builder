@@ -190,6 +190,13 @@ def test_route_runs_before_legacy_question_loader():
     assert source.index('if _query_param("event") == "consulting-week-2026"') < (
         source.index("q_df, active_survey_id, client_name = get_default_questions()")
     )
+    deployed_entrypoint = (ROOT / "ifm_dashboard.py").read_text(
+        encoding="utf-8"
+    )
+    assert deployed_entrypoint.index(
+        'if event_param == "consulting-week-2026"'
+    ) < deployed_entrypoint.index("import pandas as pd")
+    assert "configure_page=False" in deployed_entrypoint
 
 
 def test_event_collection_is_separate_from_existing_ifm_collections():
