@@ -56,7 +56,6 @@ _consulting_week_component = components.declare_component(
 )
 
 
-@st.cache_data
 def _event_config() -> dict[str, Any]:
     return load_event_config(EVENT_CONFIG_PATH)
 
