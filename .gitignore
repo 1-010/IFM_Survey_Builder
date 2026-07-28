@@ -8,3 +8,7 @@ __pycache__/
 # Local data / scratch
 local_test/
 *.jsonl
+
+# Browser QA artifacts
+.playwright-cli/
+output/playwright/

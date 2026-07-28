@@ -1,0 +1,170 @@
+{
+  "event_id": "consulting-week-2026",
+  "display_name": "Consulting Week Session Feedback",
+  "event_date": "2026-07-28",
+  "timezone": "Asia/Tokyo",
+  "status": "active",
+  "schema_version": 1,
+  "sessions": [
+    {
+      "session_id": "part1-01",
+      "part": 1,
+      "order": 1,
+      "presenter": "Naotoshi Inoue",
+      "title": "Vault環境構築と製造業バックグラウンドの紐づけ",
+      "start_at": "2026-07-28T15:05:00+09:00",
+      "end_at": "2026-07-28T15:14:00+09:00",
+      "title_status": "confirmed"
+    },
+    {
+      "session_id": "part1-02",
+      "part": 1,
+      "order": 2,
+      "presenter": "Yuhei Miyaishi",
+      "title": "DAIFUKU_AP事業部での取組",
+      "start_at": "2026-07-28T15:14:00+09:00",
+      "end_at": "2026-07-28T15:23:00+09:00",
+      "title_status": "tentative"
+    },
+    {
+      "session_id": "part1-03",
+      "part": 1,
+      "order": 3,
+      "presenter": "Hidenari Sasaki",
+      "title": "潜在的Opportunityの発掘容易化",
+      "start_at": "2026-07-28T15:23:00+09:00",
+      "end_at": "2026-07-28T15:32:00+09:00",
+      "title_status": "confirmed"
+    },
+    {
+      "session_id": "part1-04",
+      "part": 1,
+      "order": 4,
+      "presenter": "Shohei Ishikawa",
+      "title": "AIとAutodeskソリューションの交点",
+      "start_at": "2026-07-28T15:32:00+09:00",
+      "end_at": "2026-07-28T15:41:00+09:00",
+      "title_status": "confirmed"
+    },
+    {
+      "session_id": "part1-05",
+      "part": 1,
+      "order": 5,
+      "presenter": "Kazuki Itasato",
+      "title": "Data utilization for sustainability",
+      "start_at": "2026-07-28T15:41:00+09:00",
+      "end_at": "2026-07-28T15:50:00+09:00",
+      "title_status": "confirmed"
+    },
+    {
+      "session_id": "part2-01",
+      "part": 2,
+      "order": 6,
+      "presenter": "Kohtaro Inoue",
+      "title": "業務進捗管理×Forma",
+      "start_at": "2026-07-28T16:00:00+09:00",
+      "end_at": "2026-07-28T16:09:00+09:00",
+      "title_status": "confirmed"
+    },
+    {
+      "session_id": "part2-02",
+      "part": 2,
+      "order": 7,
+      "presenter": "Masayasu Fujiwara",
+      "title": "TBC",
+      "start_at": "2026-07-28T16:09:00+09:00",
+      "end_at": "2026-07-28T16:18:00+09:00",
+      "title_status": "tbc"
+    },
+    {
+      "session_id": "part2-03",
+      "part": 2,
+      "order": 8,
+      "presenter": "Supriya Prakash",
+      "title": "Forma Automation Playbook: Workflows, Integrations & APS in Practice",
+      "start_at": "2026-07-28T16:18:00+09:00",
+      "end_at": "2026-07-28T16:27:00+09:00",
+      "title_status": "confirmed"
+    },
+    {
+      "session_id": "part2-04",
+      "part": 2,
+      "order": 9,
+      "presenter": "Rahul Muralidharan",
+      "title": "TBC",
+      "start_at": "2026-07-28T16:27:00+09:00",
+      "end_at": "2026-07-28T16:36:00+09:00",
+      "title_status": "tbc"
+    },
+    {
+      "session_id": "part2-05",
+      "part": 2,
+      "order": 10,
+      "presenter": "Siddalingeshwar",
+      "title": "TBC",
+      "start_at": "2026-07-28T16:36:00+09:00",
+      "end_at": "2026-07-28T16:45:00+09:00",
+      "title_status": "tbc"
+    },
+    {
+      "session_id": "part3-01",
+      "part": 3,
+      "order": 11,
+      "presenter": "Junki Nakasuka",
+      "title": "JRのOwner DXの取組み",
+      "start_at": "2026-07-28T17:00:00+09:00",
+      "end_at": "2026-07-28T17:09:00+09:00",
+      "title_status": "tentative"
+    },
+    {
+      "session_id": "part3-02",
+      "part": 3,
+      "order": 12,
+      "presenter": "Arisa Kawabe",
+      "title": "Datumを用いたBIM確認申請に向けた取り組み",
+      "start_at": "2026-07-28T17:09:00+09:00",
+      "end_at": "2026-07-28T17:18:00+09:00",
+      "title_status": "confirmed"
+    },
+    {
+      "session_id": "part3-03",
+      "part": 3,
+      "order": 13,
+      "presenter": "Natsuki Hiraoka",
+      "title": "Nikken Sekkei Forma全社展開、Obayashi Informed Designの進捗",
+      "start_at": "2026-07-28T17:18:00+09:00",
+      "end_at": "2026-07-28T17:27:00+09:00",
+      "title_status": "tentative"
+    },
+    {
+      "session_id": "part3-04",
+      "part": 3,
+      "order": 14,
+      "presenter": "Pranjal Bisht",
+      "title": "AI Agents as Team Members: Bridging Design Models and Project Delivery in Construction",
+      "start_at": "2026-07-28T17:27:00+09:00",
+      "end_at": "2026-07-28T17:36:00+09:00",
+      "title_status": "tentative"
+    },
+    {
+      "session_id": "part3-05",
+      "part": 3,
+      "order": 15,
+      "presenter": "Tushar Pangaria",
+      "title": "TBC",
+      "start_at": "2026-07-28T17:36:00+09:00",
+      "end_at": "2026-07-28T17:45:00+09:00",
+      "title_status": "tbc"
+    },
+    {
+      "session_id": "part3-06",
+      "part": 3,
+      "order": 16,
+      "presenter": "Keita Inoue",
+      "title": "施工関連Forma戦略、IND展開戦略、工業化建築",
+      "start_at": "2026-07-28T17:45:00+09:00",
+      "end_at": "2026-07-28T17:54:00+09:00",
+      "title_status": "confirmed"
+    }
+  ]
+}

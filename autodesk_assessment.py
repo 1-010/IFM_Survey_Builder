@@ -27,6 +27,27 @@ SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_JSON = SCRIPT_DIR / "data" / "ifm_questions.json"
 IMAGES_DIR = SCRIPT_DIR / "data" / "images"
 
+
+def _query_param(name, default=None):
+    try:
+        value = st.query_params.get(name, default)
+    except AttributeError:
+        value = st.experimental_get_query_params().get(name, [default])[0]
+    if isinstance(value, list):
+        return value[0] if value else default
+    return value
+
+
+# Consulting Week is intentionally routed before the legacy IFM question/data
+# loaders run. This keeps its anonymous event records and UI isolated from all
+# IFM and customer-survey code paths while reusing the deployed Streamlit app.
+if _query_param("event") == "consulting-week-2026":
+    from consulting_week import render_consulting_week
+
+    render_consulting_week(view=str(_query_param("view", "respond")).lower())
+    st.stop()
+
+
 # Load default questions
 def load_all_questions_json():
     if DATA_JSON.exists():
