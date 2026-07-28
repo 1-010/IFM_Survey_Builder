@@ -13,7 +13,7 @@ Consulting Week（2026-07-28、Asia/Tokyo）専用の匿名イベント回答フ
 ## 起動
 
 ```powershell
-uv run --with-requirements requirements.txt streamlit run autodesk_assessment.py
+uv run --with-requirements requirements.txt streamlit run ifm_dashboard.py
 ```
 
 管理画面は既存の `sales_admin.password` を再利用します。秘密値をソースコードへ
@@ -68,8 +68,8 @@ respondent hashは含めません。
    回答画面は受付終了表示になり、管理画面とデータは残る。
 3. 保持期間の終了後、Firestoreの
    `event_responses_consulting_week_2026` collection内の文書だけを削除する。
-4. 完全撤去時は `autodesk_assessment.py` のイベントルートとConsulting Week専用
-   ファイルを削除する。既存IFM collectionは削除しない。
+4. 完全撤去時は `ifm_dashboard.py` と `autodesk_assessment.py` のイベントルート、
+   Consulting Week専用ファイルを削除する。既存IFM collectionは削除しない。
 
 ## デプロイ
 
