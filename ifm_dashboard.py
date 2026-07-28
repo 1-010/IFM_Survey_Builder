@@ -1,4 +1,8 @@
 import streamlit as st
+import pandas as pd
+import json
+from pathlib import Path
+from datetime import datetime
 
 # 必ず最初に page_config を呼び出す (Streamlitの仕様制限回避)
 st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
@@ -41,28 +45,37 @@ if event_param == "consulting-week-2026":
     )
     st.stop()
 
-# URLクエリに brand=autodesk がある場合は、該当する Autodesk版アセスメントへルーティング
-if brand_param == "autodesk":
-    from pathlib import Path
-    script_name = "autodesk_portal.py" # デフォルト: 総合案内ポータル
-    if app_param == "assessment" or tab_param in ["input", "dashboard", "admin"] or survey_id_param:
-        script_name = "autodesk_assessment.py"
-    elif app_param == "factory":
-        script_name = "autodesk_factory_survey.py"
-    elif app_param == "aec":
-        script_name = "autodesk_aec_survey.py"
-    elif app_param == "civil":
-        script_name = "autodesk_civil_survey.py"
-    elif app_param == "mfg":
-        script_name = "autodesk_mfg_survey.py"
-    elif app_param in ["super_admin", "super-admin"]:
-        script_name = "autodesk_super_admin.py"
-    elif app_param in ["product_mapping", "mapping", "products"]:
-        script_name = "autodesk_product_mapping.py"
-    elif app_param in ["portal", "console"]:
-        script_name = "autodesk_portal.py"
-        
-    target_path = Path(__file__).resolve().parent / script_name
+# サブアプリへの統合ルーティング（ブランド・アプリパラメータ判定）
+if app_param in ["product_mapping", "mapping", "products"]:
+    target_path = Path(__file__).resolve().parent / "autodesk_product_mapping.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
+elif app_param == "factory":
+    target_path = Path(__file__).resolve().parent / "autodesk_factory_survey.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
+elif app_param == "aec":
+    target_path = Path(__file__).resolve().parent / "autodesk_aec_survey.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
+elif app_param == "civil":
+    target_path = Path(__file__).resolve().parent / "autodesk_civil_survey.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
+elif app_param == "mfg":
+    target_path = Path(__file__).resolve().parent / "autodesk_mfg_survey.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
+elif app_param in ["super_admin", "super-admin"]:
+    target_path = Path(__file__).resolve().parent / "autodesk_super_admin.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
+elif app_param in ["portal", "console"] or (brand_param == "autodesk" and not app_param and not tab_param and not survey_id_param) or (not brand_param and not app_param and not tab_param and not survey_id_param):
+    target_path = Path(__file__).resolve().parent / "autodesk_portal.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
+elif app_param == "assessment" or tab_param or survey_id_param:
+    target_path = Path(__file__).resolve().parent / "autodesk_assessment.py"
     exec(open(target_path, encoding="utf-8").read(), globals())
     st.stop()
 import json
