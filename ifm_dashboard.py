@@ -8,11 +8,15 @@ brand_param = None
 app_param = None
 event_param = None
 view_param = None
+tab_param = None
+survey_id_param = None
 try:
     brand_param = st.query_params.get("brand")
     app_param = st.query_params.get("app")
     event_param = st.query_params.get("event")
     view_param = st.query_params.get("view", "respond")
+    tab_param = st.query_params.get("tab")
+    survey_id_param = st.query_params.get("survey_id")
 except AttributeError:
     try:
         brand_param = st.experimental_get_query_params().get("brand", [None])[0]
@@ -21,6 +25,8 @@ except AttributeError:
         view_param = st.experimental_get_query_params().get(
             "view", ["respond"]
         )[0]
+        tab_param = st.experimental_get_query_params().get("tab", [None])[0]
+        survey_id_param = st.experimental_get_query_params().get("survey_id", [None])[0]
     except:
         pass
 
@@ -38,8 +44,10 @@ if event_param == "consulting-week-2026":
 # URLクエリに brand=autodesk がある場合は、該当する Autodesk版アセスメントへルーティング
 if brand_param == "autodesk":
     from pathlib import Path
-    script_name = "autodesk_assessment.py" # デフォルト: 設備管理成熟度
-    if app_param == "factory":
+    script_name = "autodesk_portal.py" # デフォルト: 総合案内ポータル
+    if app_param == "assessment" or tab_param in ["input", "dashboard", "admin"] or survey_id_param:
+        script_name = "autodesk_assessment.py"
+    elif app_param == "factory":
         script_name = "autodesk_factory_survey.py"
     elif app_param == "aec":
         script_name = "autodesk_aec_survey.py"
@@ -47,16 +55,16 @@ if brand_param == "autodesk":
         script_name = "autodesk_civil_survey.py"
     elif app_param == "mfg":
         script_name = "autodesk_mfg_survey.py"
-    elif app_param == "super_admin" or app_param == "super-admin":
+    elif app_param in ["super_admin", "super-admin"]:
         script_name = "autodesk_super_admin.py"
-    elif app_param == "portal" or app_param == "console":
+    elif app_param in ["product_mapping", "mapping", "products"]:
+        script_name = "autodesk_product_mapping.py"
+    elif app_param in ["portal", "console"]:
         script_name = "autodesk_portal.py"
         
     target_path = Path(__file__).resolve().parent / script_name
     exec(open(target_path, encoding="utf-8").read(), globals())
     st.stop()
-
-import pandas as pd
 import json
 import plotly.graph_objects as go
 from pathlib import Path
