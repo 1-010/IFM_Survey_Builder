@@ -2,6 +2,11 @@ import streamlit as st
 from datetime import datetime
 from pathlib import Path
 
+try:
+    SCRIPT_DIR = Path(__file__).resolve().parent
+except NameError:
+    SCRIPT_DIR = Path(".").resolve()
+
 # Theme setup (Autodesk Black/Yellow/Cyan modern dark theme)
 st.markdown(
     """
@@ -273,7 +278,7 @@ with col_main:
         )
 
 with col_sidebar:
-    hero_path = Path(__file__).resolve().parent / "data" / "images" / "brand-image-prototype-1-dark.webp"
+    hero_path = SCRIPT_DIR / "data" / "images" / "brand-image-prototype-1-dark.webp"
     if hero_path.exists():
         st.image(str(hero_path), caption="設計・製造データをつなぐIFMアセスメント", use_container_width=True)
 

@@ -33,7 +33,10 @@ from db_helper import (
 )
 from ifm_guardrails import get_secret_password
 
-ROOT = Path(__file__).resolve().parent
+try:
+    ROOT = Path(__file__).resolve().parent
+except NameError:
+    ROOT = Path(".").resolve()
 EVENT_CONFIG_PATH = ROOT / "data" / "consulting_week_2026.json"
 COMPONENT_PATH = ROOT / "components" / "consulting_week_form"
 AUTODESK_LOGO_PATH = ROOT / "data" / "images" / "autodesk_logo_white.svg"

@@ -18,7 +18,10 @@ from db_helper import (
 )
 
 # Paths
-SCRIPT_DIR = Path(__file__).resolve().parent
+try:
+    SCRIPT_DIR = Path(__file__).resolve().parent
+except NameError:
+    SCRIPT_DIR = Path(".").resolve()
 DATA_JSON = SCRIPT_DIR / "data" / "ifm_questions.json"
 IMAGES_DIR = SCRIPT_DIR / "data" / "images"
 

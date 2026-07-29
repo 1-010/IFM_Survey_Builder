@@ -1,8 +1,12 @@
+import streamlit as st
 import sys
 import os
 from pathlib import Path
 
-SCRIPT_DIR = Path(__file__).resolve().parent
+try:
+    SCRIPT_DIR = Path(__file__).resolve().parent
+except NameError:
+    SCRIPT_DIR = Path(".").resolve()
 if str(SCRIPT_DIR) not in sys.path:
     sys.path.insert(0, str(SCRIPT_DIR))
 
