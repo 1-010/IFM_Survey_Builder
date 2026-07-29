@@ -7,7 +7,10 @@ from pathlib import Path
 from db_helper import save_custom_survey, update_survey_status
 
 # Page config
-st.set_page_config(page_title="設問×Autodesk製品マッピング & AI語彙調整", layout="wide")
+try:
+    st.set_page_config(page_title="設問×Autodesk製品マッピング & AI語彙調整", layout="wide")
+except Exception:
+    pass
 
 # Paths
 SCRIPT_DIR = Path(__file__).resolve().parent

@@ -9,7 +9,10 @@ from db_helper import (
 )
 import plotly.graph_objects as go
 
-st.set_page_config(page_title="営業マイポータル | IFM Maturity Assessment", layout="wide")
+try:
+    st.set_page_config(page_title="営業マイポータル | IFM Maturity Assessment", layout="wide")
+except Exception:
+    pass
 
 # Theme setup (Autodesk Black/Yellow modern dark theme)
 st.markdown(
