@@ -30,26 +30,30 @@ st.markdown(
         background-color: #000000 !important;
         color: #FFFFFF !important;
         font-family: Arial, system-ui, -apple-system, "Segoe UI", sans-serif !important;
-        font-size: 15px;
+        font-size: 17px !important;
     }
     
-    /* Responsive Text Sizes for Mobile */
+    /* Responsive Text Sizes for Mobile & High Res */
     @media (max-width: 768px) {
         html, body, [data-testid="stAppViewContainer"] {
-            font-size: 16px !important;
+            font-size: 18px !important;
         }
         h3 {
-            font-size: 1.35rem !important;
+            font-size: 1.45rem !important;
         }
         h4 {
-            font-size: 1.15rem !important;
-        }
-        .stSlider {
-            margin-bottom: 10px !important;
+            font-size: 1.25rem !important;
         }
     }
     
     h1, h2, h3, h4, h5, h6, label, span, p {
+        color: #FFFFFF !important;
+    }
+    
+    /* Slider label size enhancement */
+    .stSlider label p {
+        font-size: 1.05rem !important;
+        font-weight: 700 !important;
         color: #FFFFFF !important;
     }
     
@@ -78,6 +82,7 @@ st.markdown(
         border: 1px solid #666666 !important;
         background-color: #121212 !important;
         color: #FFFFFF !important;
+        font-size: 1.05rem !important;
     }
 
     div[data-baseweb="input"] input,
@@ -88,6 +93,7 @@ st.markdown(
         color: #FFFFFF !important;
         -webkit-text-fill-color: #FFFFFF !important;
         caret-color: #FFFFFF !important;
+        font-size: 1.05rem !important;
     }
     div[data-baseweb="input"] input::placeholder,
     div[data-baseweb="textarea"] textarea::placeholder,
@@ -104,7 +110,7 @@ st.markdown(
         border: none !important;
         border-radius: 4px !important;
         font-weight: 700 !important;
-        font-size: 0.95rem !important;
+        font-size: 1.05rem !important;
         letter-spacing: 0.05em !important;
         padding: 12px 28px !important;
         transition: all 0.15s ease;
@@ -122,7 +128,7 @@ st.markdown(
         border: 1px solid #666666 !important;
         border-radius: 4px !important;
         font-weight: 500 !important;
-        font-size: 0.95rem !important;
+        font-size: 1.05rem !important;
         padding: 12px 28px !important;
         transition: all 0.15s ease;
     }
@@ -146,7 +152,7 @@ st.markdown(
         color: #666666 !important;
     }
     
-    /* Toggle Switch Styling - Standard Gray & Active green, no ugly yellow */
+    /* Toggle Switch Styling */
     div[data-testid="stToggle"] > label > div:first-child {
         background-color: #333333 !important;
     }
@@ -227,7 +233,7 @@ q_df, active_survey_id, client_name = get_mfg_questions()
 def get_gspread_client():
     if "gserviceaccount" not in st.secrets:
         return None
-    scope = ['https://www.googleapis.com/auth/sheets', 'https://www.googleapis.com/auth/drive']
+    scope = ['https://www.googleapis.com/auth/spreadsheets', 'https://www.googleapis.com/auth/drive']
     try:
         creds_dict = dict(st.secrets["gserviceaccount"])
         if "private_key" in creds_dict:
@@ -281,16 +287,17 @@ def is_valid_email(email):
 if q_df.empty:
     st.stop()
 
+# Persistent answers store in session state
+if "survey_answers" not in st.session_state:
+    st.session_state.survey_answers = {}
+
 # Image Mapping for MFG
 IMAGE_MAPPING = {
-    "MF01": "fy27-dm-digital-factory-campaign-visual-01.webp",
-    "MF02": "fy27-dm-fusion-industry-cloud-imagery.webp",
-    "MF03": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp",
+    "MF01": "fy27-dm-fusion-industry-cloud-imagery.webp",
+    "MF02": "Tech-Center-Birmingham-industrial-robots-086_with_overlay.webp",
+    "MF03": "brand-image-prototype-1-dark.webp",
     "MF04": "brand-image-prototype-4-dark.webp",
-    "MF05": "fy27-aec-forma-industry-cloud-imagery.webp",
-    "MF06": "brand-image-prototype-1-dark.webp",
-    "MF07": "Construction-CCEED-China-0644_with_overlay.webp",
-    "MF08": "fy27-water-image-02.webp"
+    "MF05": "fy27-dm-digital-factory-campaign-visual-01.webp"
 }
 
 def render_hero_image(qid):
@@ -303,14 +310,14 @@ def render_hero_image(qid):
     st.markdown(
         """
         <div style="border: 1px solid #666666; background-color: #121212; height: 180px; display: flex; align-items: center; justify-content: center; border-radius: 0px; color: #D5D5CB; font-size: 0.9rem; font-family: monospace; margin-bottom: 20px;">
-        [ AUTODESK // PRECISION_DESIGN_SYSTEM ]
+        [ AUTODESK // MFG_PROCESS_SYSTEM ]
         </div>
         """,
         unsafe_allow_html=True
     )
 
 # Brand Header Layout
-header_html = '<div style="display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 16px;gap:16px;"><div><div style="font-size:.78rem;color:#D5D5CB;letter-spacing:.12em;text-transform:uppercase;font-weight:600;">IFM Maturity Assessment</div><div style="font-size:1.85rem;font-weight:700;color:#FFFFFF;letter-spacing:-.03em;">製品設計・開発 デジタル適性診断</div></div><div style="font-size:.8rem;color:#D5D5CB;">for Autodesk Design &amp; Make workflows</div></div>'
+header_html = '<div style="display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 16px;gap:16px;"><div><div style="font-size:.85rem;color:#FFFF00;letter-spacing:.12em;text-transform:uppercase;font-weight:700;">IFM Maturity Assessment</div><div style="font-size:2.0rem;font-weight:700;color:#FFFFFF;letter-spacing:-.03em;">製造・プロセス成熟度アセスメント</div></div><div style="font-size:.85rem;color:#D5D5CB;">for Autodesk Design &amp; Make workflows</div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
 
@@ -327,19 +334,19 @@ with tabs[0]:
         
     with col_left_form:
         if st.session_state.is_submitted:
-            st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF;'>アセスメント回答送信完了</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF; font-size:1.5rem;'>アセスメント回答送信完了</h3>", unsafe_allow_html=True)
             st.success("アセスメントの回答が安全に記録されました。ご協力ありがとうございました。")
             st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
             
             st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
             if st.button("アセスメントを再回答する", type="secondary", use_container_width=True):
                 for key in list(st.session_state.keys()):
-                    if key.startswith(("asis_", "tobe_", "skip_", "res_")) or key in {"agree_privacy", "agree_privacy_step0", "current_step", "is_submitted"}:
+                    if key.startswith(("asis_", "tobe_", "skip_", "res_")) or key in {"agree_privacy", "agree_privacy_step0", "current_step", "is_submitted", "survey_answers"}:
                         st.session_state.pop(key, None)
                 st.rerun()
 
         elif st.session_state.current_step == 0:
-            st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF;'>回答者プロファイル ＆ 同意確認</h3>", unsafe_allow_html=True)
+            st.markdown("<h3 style='margin-bottom:10px; font-weight:700; color:#FFFFFF; font-size:1.45rem;'>回答者プロファイル ＆ 同意確認</h3>", unsafe_allow_html=True)
             respondent_name = st.text_input("回答者名 *", placeholder="氏名をご記入ください（例: 山田 太郎）", value=st.session_state.get("res_name", ""))
             st.session_state["res_name"] = respondent_name
             
@@ -355,7 +362,7 @@ with tabs[0]:
             )
             st.session_state["res_exp"] = experience_years
             
-            specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: 製品設計部 開発課", value=st.session_state.get("res_team", ""))
+            specific_team = st.text_input("部署名・チーム名 (任意)", placeholder="例: 技術本部 製造課", value=st.session_state.get("res_team", ""))
             st.session_state["res_team"] = specific_team
             
             st.markdown("<hr style='border-color:#666666; margin:20px 0;'>", unsafe_allow_html=True)
@@ -364,10 +371,10 @@ with tabs[0]:
             
             if not agree_privacy:
                 st.markdown("<div style='margin-top:10px;'></div>", unsafe_allow_html=True)
-                st.markdown("<b style='font-size:0.85rem; color:#D5D5CB;'>個人情報の利用目的と保存先</b>", unsafe_allow_html=True)
+                st.markdown("<b style='font-size:0.95rem; color:#D5D5CB;'>個人情報の利用目的と保存先</b>", unsafe_allow_html=True)
                 privacy_policy_text = "入力された氏名、メールアドレス、所属情報および回答内容は、成熟度分析、結果の連絡、提案内容の改善のために利用し、運用管理者が管理するFirestoreおよびGoogle Sheetsへ保存します。アクセスは担当者とシステム管理者に限定します。保持期間、削除依頼、第三者提供の有無など正式な取扱条件は、発行元が提示する個人情報取扱方針を確認してください。正式な方針が提示されていない場合は回答を開始せず、発行元へお問い合わせください。"
                 st.markdown(
-                    f'<div style="background-color:#121212; border:1px solid #333333; border-radius:8px; padding:15px; font-size:0.88rem; color:#8C9BA5; line-height:1.5; white-space:pre-wrap; transition: all 0.2s ease;">{privacy_policy_text}</div>',
+                    f'<div style="background-color:#121212; border:1px solid #333333; border-radius:8px; padding:15px; font-size:0.95rem; color:#8C9BA5; line-height:1.6; white-space:pre-wrap; transition: all 0.2s ease;">{privacy_policy_text}</div>',
                     unsafe_allow_html=True
                 )
             
@@ -385,29 +392,29 @@ with tabs[0]:
                 st.rerun()
                 
         else:
-            # Keep the mobile flow compact: render only the current question.
             for step_idx in [st.session_state.current_step]:
                 q_idx = step_idx - 1
                 row = q_df.iloc[q_idx]
                 qid = row['question_id']
                 
+                raw_qtext = str(row['question_text'])
+                formatted_qtext = raw_qtext.replace('\n', '<br>')
+                
                 st.markdown(
-                    f"<div style='background-color:#121212; padding:15px; border-left:4px solid #FFFF00; margin-top:20px; border-top:1px solid #333333; border-right:1px solid #333333; border-bottom:1px solid #333333;'>"
-                    f"<div style='font-size:0.8rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
+                    f"<div style='background-color:#121212; padding:20px; border-left:5px solid #FFFF00; margin-top:15px; border-radius:4px; border-top:1px solid #333333; border-right:1px solid #333333; border-bottom:1px solid #333333;'>"
+                    f"<div style='font-size:0.92rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;'>"
                     f"{row['department']} 領域  ·  設問 {step_idx} / {num_questions}</div>"
-                    f"<h4 style='margin-top:4px; margin-bottom:6px; font-size:1.2rem; font-weight:700; color:#FFFFFF;'>{row['question_id']} ({row['phase']})</h4>"
-                    f"<div style='font-size:0.92rem; line-height:1.45; color:#FFFFFF;'>{row['question_text']}</div>"
+                    f"<h3 style='margin-top:2px; margin-bottom:10px; font-size:1.45rem; font-weight:700; color:#FFFFFF;'>{row['question_id']} ({row['phase']})</h3>"
+                    f"<div style='font-size:1.08rem; line-height:1.65; color:#FFFFFF; white-space:pre-wrap;'>{formatted_qtext}</div>"
                     f"</div>",
                     unsafe_allow_html=True
                 )
                 
-                # スキップトグル (回答済みのステップは強制ロック)
                 skip_key = f"skip_{qid}"
                 if skip_key not in st.session_state:
                     st.session_state[skip_key] = False
                 skip = st.toggle("自身の職務には該当しない (この設問をスキップ)", key=skip_key, disabled=(step_idx < st.session_state.current_step))
                 
-                # スライダー値の取得
                 asis_key = f"asis_{qid}"
                 tobe_key = f"tobe_{qid}"
                 
@@ -416,39 +423,44 @@ with tabs[0]:
                 if tobe_key not in st.session_state:
                     st.session_state[tobe_key] = 4
                 
+                st.session_state.survey_answers[qid] = {
+                    "asis": st.session_state[asis_key],
+                    "tobe": st.session_state[tobe_key],
+                    "skip": skip
+                }
+                
                 if not skip:
-                    # レベルカードの表示
                     as_is_val = st.session_state[asis_key]
                     to_be_val = st.session_state[tobe_key]
                     
-                    levels_html = "<div style='display: flex; flex-direction: column; gap: 4px; margin-top: 8px; margin-bottom: 12px;'>"
+                    levels_html = "<div style='display: flex; flex-direction: column; gap: 8px; margin-top: 14px; margin-bottom: 16px;'>"
                     for lvl in ["L1", "L2", "L3", "L4", "L5"]:
                         lvl_num = int(lvl[1])
                         is_asis = (as_is_val == lvl_num)
                         is_tobe = (to_be_val == lvl_num)
                         
-                        border_color = "rgba(102, 102, 102, 0.15)" 
-                        bg_color = "transparent"
+                        border_color = "rgba(102, 102, 102, 0.25)" 
+                        bg_color = "#121212"
                         badge_html = ""
                         
                         if is_asis and is_tobe:
                             border_color = "#FFFF00" 
-                            bg_color = "rgba(255, 255, 0, 0.04)"
-                            badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>As-Is & To-Be</span>"
+                            bg_color = "rgba(255, 255, 0, 0.08)"
+                            badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is & To-Be</span>"
                         elif is_asis:
                             border_color = "#1D91D0" 
-                            bg_color = "rgba(29, 145, 208, 0.06)"
-                            badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>As-Is</span>"
+                            bg_color = "rgba(29, 145, 208, 0.12)"
+                            badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is</span>"
                         elif is_tobe:
                             border_color = "#2AD0A9" 
-                            bg_color = "rgba(42, 208, 169, 0.03)"
-                            badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>To-Be</span>"
+                            bg_color = "rgba(42, 208, 169, 0.08)"
+                            badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>To-Be</span>"
                             
-                        levels_html += f'<div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 5px 10px; border-top: 1px solid rgba(102,102,102,0.1); border-right: 1px solid rgba(102,102,102,0.1); border-bottom: 1px solid rgba(102,102,102,0.1);"><div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<b style="font-size: 0.78rem; color: #D5D5CB;">Level {lvl_num}</b></div><div style="font-size: 0.8rem; color: #FFFFFF; line-height: 1.35;">{row["levels"][lvl]}</div></div>'
+                        lvl_text = str(row["levels"][lvl]).replace('\n', '<br>')
+                        levels_html += f'<div style="border-left: 4px solid {border_color}; background-color: {bg_color}; padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); border-radius:4px;"><div style="display: flex; align-items: center; margin-bottom: 4px;">{badge_html}<b style="font-size: 0.95rem; color: #FFFF00; font-weight: 700;">Level {lvl_num}</b></div><div style="font-size: 1.02rem; color: #FFFFFF; line-height: 1.6; white-space: pre-wrap;">{lvl_text}</div></div>'
                     levels_html += "</div>"
                     st.markdown(levels_html, unsafe_allow_html=True)
                     
-                    # カラー同期されたスライダーの描画 (回答済みのステップは強制ロック)
                     col_s1, col_s2 = st.columns(2)
                     with col_s1:
                         st.markdown("<div class='asis-slider-container'>", unsafe_allow_html=True)
@@ -459,9 +471,8 @@ with tabs[0]:
                         st.slider("将来の目標成熟度 (To-Be)", 1, 5, key=tobe_key, disabled=(step_idx < st.session_state.current_step))
                         st.markdown("</div>", unsafe_allow_html=True)
                 else:
-                    st.markdown("<div style='padding:10px 0; color:#8C9BA5; font-size:0.9rem;'>※ この設問はスキップされています</div>", unsafe_allow_html=True)
+                    st.markdown("<div style='padding:12px 0; color:#8C9BA5; font-size:1.0rem;'>※ この設問はスキップされています</div>", unsafe_allow_html=True)
                 
-                # 「現在フォーカスしている最新の設問」のみ操作ボタンを表示する
                 if step_idx == st.session_state.current_step:
                     st.markdown("<div style='margin-top:15px;'></div>", unsafe_allow_html=True)
                     if step_idx > 1 and st.button("前の設問に戻って修正する", type="secondary", use_container_width=True, key=f"back_btn_{qid}"):
@@ -472,7 +483,6 @@ with tabs[0]:
                             st.session_state.current_step += 1
                             st.rerun()
                     else:
-                        # 最終設問の最後の送信ボタン
                         profile_valid = (
                             st.session_state.get("res_name", "").strip() != "" and
                             st.session_state.get("res_email", "").strip() != "" and
@@ -488,16 +498,13 @@ with tabs[0]:
                             st.warning("送信するには個人情報の取り扱いへの同意が必要です。")
 
     with col_right_chart:
-        # 現在アクティブな設問IDのイメージを表示
-        if st.session_state.is_submitted:
+        if st.session_state.is_submitted or st.session_state.current_step == 0:
             render_hero_image("MF01")
-        elif st.session_state.current_step == 0:
-            render_hero_image("MF01") 
         else:
             current_active_qid = q_df.iloc[st.session_state.current_step - 1]['question_id']
             render_hero_image(current_active_qid)
             
-        st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-bottom:8px; font-weight:700; font-size:1.25rem; color:#FFFFFF;'>ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
         
         plot_categories = []
         plot_asis = []
@@ -505,10 +512,18 @@ with tabs[0]:
         
         for idx, r in q_df.iterrows():
             q_id = r['question_id']
-            is_skipped = st.session_state.get(f"skip_{q_id}", False)
-            as_is = st.session_state.get(f"asis_{q_id}", 0) if not is_skipped else 0
-            to_be = st.session_state.get(f"tobe_{q_id}", 0) if not is_skipped else 0
+            ans = st.session_state.survey_answers.get(q_id, {"asis": 2, "tobe": 4, "skip": False})
             
+            is_step_reached = (idx + 1 <= st.session_state.current_step) or st.session_state.is_submitted
+            is_skipped = ans.get("skip", False)
+            
+            if is_step_reached and not is_skipped:
+                as_is = ans.get("asis", 2)
+                to_be = ans.get("tobe", 4)
+            else:
+                as_is = 0
+                to_be = 0
+                
             plot_categories.append(f"{r['phase']}\n({q_id})")
             plot_asis.append(as_is)
             plot_tobe.append(to_be)
@@ -521,9 +536,9 @@ with tabs[0]:
                 fill='toself',
                 name='現在の評価 (As-Is)',
                 line_color='#1D91D0',
-                fillcolor='rgba(29, 145, 208, 0.08)',
-                line=dict(width=1.5),
-                opacity=0.7
+                fillcolor='rgba(29, 145, 208, 0.15)',
+                line=dict(width=2.5),
+                opacity=0.8
             ))
             fig.add_trace(go.Scatterpolar(
                 r=plot_tobe + [plot_tobe[0]],
@@ -531,9 +546,9 @@ with tabs[0]:
                 fill='toself',
                 name='将来の目標 (To-Be)',
                 line_color='#2AD0A9',
-                fillcolor='rgba(42, 208, 169, 0.04)',
-                line=dict(width=1.2, dash='dash'),
-                opacity=0.5
+                fillcolor='rgba(42, 208, 169, 0.08)',
+                line=dict(width=2.0, dash='dash'),
+                opacity=0.7
             ))
             
             fig.update_layout(
@@ -542,14 +557,14 @@ with tabs[0]:
                         visible=True,
                         range=[0, 5],
                         tickvals=[1, 2, 3, 4, 5],
-                        gridcolor='rgba(102, 102, 102, 0.15)',
-                        linecolor='rgba(102, 102, 102, 0.2)',
-                        tickfont=dict(color='#666666', size=8)
+                        gridcolor='rgba(255, 255, 255, 0.2)',
+                        linecolor='rgba(255, 255, 255, 0.3)',
+                        tickfont=dict(color='#FFFFFF', size=11, family='Arial')
                     ),
                     angularaxis=dict(
-                        gridcolor='rgba(102, 102, 102, 0.15)',
-                        linecolor='rgba(102, 102, 102, 0.2)',
-                        tickfont=dict(color='#D5D5CB', size=8.5, family='Inter')
+                        gridcolor='rgba(255, 255, 255, 0.2)',
+                        linecolor='rgba(255, 255, 255, 0.3)',
+                        tickfont=dict(color='#FFFFFF', size=11.5, family='Arial')
                     ),
                     bgcolor='rgba(0,0,0,0)'
                 ),
@@ -560,7 +575,7 @@ with tabs[0]:
                     y=-0.28,
                     xanchor="center",
                     x=0.5,
-                    font=dict(color='#D5D5CB', size=10)
+                    font=dict(color='#FFFFFF', size=12)
                 ),
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
@@ -568,11 +583,10 @@ with tabs[0]:
             )
             st.plotly_chart(fig, use_container_width=True)
             
-            answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
+            answered_count = len(st.session_state.survey_answers) if st.session_state.is_submitted else max(0, min(num_questions, st.session_state.current_step))
             st.progress(answered_count / num_questions)
-            st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:right; font-size:0.88rem; color:#D5D5CB; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
-    # 最終送信処理の実行（デバッグ用トレース出力付き）
     if not st.session_state.is_submitted and st.session_state.current_step == num_questions and 'submit_clicked' in locals() and submit_clicked:
         res_name = st.session_state.get("res_name", "").strip()
         res_email = st.session_state.get("res_email", "").strip()
@@ -587,9 +601,10 @@ with tabs[0]:
             
             for _, r in q_df.iterrows():
                 q_id = r['question_id']
-                is_skipped = st.session_state.get(f"skip_{q_id}", False)
-                as_is_val = "N/A" if is_skipped else st.session_state.get(f"asis_{q_id}", 2)
-                to_be_val = "N/A" if is_skipped else st.session_state.get(f"tobe_{q_id}", 4)
+                ans = st.session_state.survey_answers.get(q_id, {"asis": 2, "tobe": 4, "skip": False})
+                is_skipped = ans.get("skip", False)
+                as_is_val = "N/A" if is_skipped else ans.get("asis", 2)
+                to_be_val = "N/A" if is_skipped else ans.get("tobe", 4)
                 
                 records.append({
                     "timestamp": timestamp,

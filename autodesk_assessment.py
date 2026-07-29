@@ -543,12 +543,15 @@ with tab_input:
                 row = q_df.iloc[q_idx]
                 qid = row['question_id']
                 
+                raw_qtext = str(row['question_text'])
+                formatted_qtext = raw_qtext.replace('\n', '<br>')
+                
                 st.markdown(
-                    f"<div style='background-color:#121212; padding:15px; border-left:4px solid #FFFF00; margin-top:20px; border-top:1px solid #333333; border-right:1px solid #333333; border-bottom:1px solid #333333;'>"
-                    f"<div style='font-size:0.8rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em;'>"
+                    f"<div style='background-color:#121212; padding:20px; border-left:5px solid #FFFF00; margin-top:15px; border-radius:4px; border-top:1px solid #333333; border-right:1px solid #333333; border-bottom:1px solid #333333;'>"
+                    f"<div style='font-size:0.92rem; color:#FFFF00; font-weight:700; text-transform:uppercase; letter-spacing:0.08em; margin-bottom:6px;'>"
                     f"{html.escape(str(row['department']))} 領域  ·  設問 {step_idx} / {num_questions}</div>"
-                    f"<h4 style='margin-top:4px; margin-bottom:6px; font-size:1.2rem; font-weight:700; color:#FFFFFF;'>{html.escape(str(row['question_id']))} ({html.escape(str(row['phase']))})</h4>"
-                    f"<div style='font-size:0.92rem; line-height:1.45; color:#FFFFFF;'>{html.escape(str(row['question_text']))}</div>"
+                    f"<h3 style='margin-top:2px; margin-bottom:10px; font-size:1.45rem; font-weight:700; color:#FFFFFF;'>{html.escape(str(row['question_id']))} ({html.escape(str(row['phase']))})</h3>"
+                    f"<div style='font-size:1.08rem; line-height:1.65; color:#FFFFFF; white-space:pre-wrap;'>{formatted_qtext}</div>"
                     f"</div>",
                     unsafe_allow_html=True
                 )
@@ -573,30 +576,31 @@ with tab_input:
                     as_is_val = st.session_state[asis_key]
                     to_be_val = st.session_state[tobe_key]
                     
-                    levels_html = "<div style='display: flex; flex-direction: column; gap: 4px; margin-top: 8px; margin-bottom: 12px;'>"
+                    levels_html = "<div style='display: flex; flex-direction: column; gap: 8px; margin-top: 14px; margin-bottom: 16px;'>"
                     for lvl in ["L1", "L2", "L3", "L4", "L5"]:
                         lvl_num = int(lvl[1])
                         is_asis = (as_is_val == lvl_num)
                         is_tobe = (to_be_val == lvl_num)
                         
-                        border_color = "rgba(102, 102, 102, 0.15)" 
-                        bg_color = "transparent"
+                        border_color = "rgba(102, 102, 102, 0.25)" 
+                        bg_color = "#121212"
                         badge_html = ""
                         
                         if is_asis and is_tobe:
                             border_color = "#FFFF00" 
-                            bg_color = "rgba(255, 255, 0, 0.04)"
-                            badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>As-Is & To-Be</span>"
+                            bg_color = "rgba(255, 255, 0, 0.08)"
+                            badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is & To-Be</span>"
                         elif is_asis:
                             border_color = "#1D91D0" 
-                            bg_color = "rgba(29, 145, 208, 0.06)"
-                            badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>As-Is</span>"
+                            bg_color = "rgba(29, 145, 208, 0.12)"
+                            badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is</span>"
                         elif is_tobe:
                             border_color = "#2AD0A9" 
-                            bg_color = "rgba(42, 208, 169, 0.03)"
-                            badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.68rem; font-weight:700; padding:1px 4px; border-radius:2px; margin-right:6px;'>To-Be</span>"
+                            bg_color = "rgba(42, 208, 169, 0.08)"
+                            badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>To-Be</span>"
                             
-                        levels_html += f'<div style="border-left: 3px solid {border_color}; background-color: {bg_color}; padding: 5px 10px; border-top: 1px solid rgba(102,102,102,0.1); border-right: 1px solid rgba(102,102,102,0.1); border-bottom: 1px solid rgba(102,102,102,0.1);"><div style="display: flex; align-items: center; margin-bottom: 2px;">{badge_html}<b style="font-size: 0.78rem; color: #D5D5CB;">Level {lvl_num}</b></div><div style="font-size: 0.8rem; color: #FFFFFF; line-height: 1.35;">{row["levels"][lvl]}</div></div>'
+                        lvl_text = str(row["levels"][lvl]).replace('\n', '<br>')
+                        levels_html += f'<div style="border-left: 4px solid {border_color}; background-color: {bg_color}; padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); border-radius:4px;"><div style="display: flex; align-items: center; margin-bottom: 4px;">{badge_html}<b style="font-size: 0.95rem; color: #FFFF00; font-weight: 700;">Level {lvl_num}</b></div><div style="font-size: 1.02rem; color: #FFFFFF; line-height: 1.6; white-space: pre-wrap;">{lvl_text}</div></div>'
                     levels_html += "</div>"
                     st.markdown(levels_html, unsafe_allow_html=True)
                     
@@ -649,7 +653,7 @@ with tab_input:
             current_active_qid = q_df.iloc[st.session_state.current_step - 1]['question_id']
             render_hero_image(current_active_qid)
             
-        st.markdown("<h4 style='margin-bottom:5px; font-weight:600; font-size:1.1rem; color:#D5D5CB;'>ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
+        st.markdown("<h4 style='margin-bottom:8px; font-weight:700; font-size:1.25rem; color:#FFFFFF;'>ライブ成熟度プロファイル</h4>", unsafe_allow_html=True)
         
         plot_categories = []
         plot_asis = []
@@ -657,10 +661,18 @@ with tab_input:
         
         for idx, r in q_df.iterrows():
             q_id = r['question_id']
-            is_skipped = st.session_state.get(f"skip_{q_id}", False)
-            as_is = st.session_state.get(f"asis_{q_id}", 0) if not is_skipped else 0
-            to_be = st.session_state.get(f"tobe_{q_id}", 0) if not is_skipped else 0
+            ans = st.session_state.survey_answers.get(q_id, {"asis": 2, "tobe": 4, "skip": False})
             
+            is_step_reached = (idx + 1 <= st.session_state.current_step) or st.session_state.is_submitted
+            is_skipped = ans.get("skip", False)
+            
+            if is_step_reached and not is_skipped:
+                as_is = ans.get("asis", 2)
+                to_be = ans.get("tobe", 4)
+            else:
+                as_is = 0
+                to_be = 0
+                
             plot_categories.append(f"{r['phase']}\n({q_id})")
             plot_asis.append(as_is)
             plot_tobe.append(to_be)
@@ -673,9 +685,9 @@ with tab_input:
                 fill='toself',
                 name='現在の評価 (As-Is)',
                 line_color='#1D91D0',
-                fillcolor='rgba(29, 145, 208, 0.08)',
-                line=dict(width=1.5),
-                opacity=0.7
+                fillcolor='rgba(29, 145, 208, 0.15)',
+                line=dict(width=2.5),
+                opacity=0.8
             ))
             fig.add_trace(go.Scatterpolar(
                 r=plot_tobe + [plot_tobe[0]],
@@ -683,9 +695,9 @@ with tab_input:
                 fill='toself',
                 name='将来の目標 (To-Be)',
                 line_color='#2AD0A9',
-                fillcolor='rgba(42, 208, 169, 0.04)',
-                line=dict(width=1.2, dash='dash'),
-                opacity=0.5
+                fillcolor='rgba(42, 208, 169, 0.08)',
+                line=dict(width=2.0, dash='dash'),
+                opacity=0.7
             ))
             
             fig.update_layout(
@@ -694,14 +706,14 @@ with tab_input:
                         visible=True,
                         range=[0, 5],
                         tickvals=[1, 2, 3, 4, 5],
-                        gridcolor='rgba(102, 102, 102, 0.15)',
-                        linecolor='rgba(102, 102, 102, 0.2)',
-                        tickfont=dict(color='#666666', size=8)
+                        gridcolor='rgba(255, 255, 255, 0.2)',
+                        linecolor='rgba(255, 255, 255, 0.3)',
+                        tickfont=dict(color='#FFFFFF', size=11, family='Arial')
                     ),
                     angularaxis=dict(
-                        gridcolor='rgba(102, 102, 102, 0.15)',
-                        linecolor='rgba(102, 102, 102, 0.2)',
-                        tickfont=dict(color='#D5D5CB', size=8.5, family='Inter')
+                        gridcolor='rgba(255, 255, 255, 0.2)',
+                        linecolor='rgba(255, 255, 255, 0.3)',
+                        tickfont=dict(color='#FFFFFF', size=11.5, family='Arial')
                     ),
                     bgcolor='rgba(0,0,0,0)'
                 ),
@@ -712,7 +724,7 @@ with tab_input:
                     y=-0.28,
                     xanchor="center",
                     x=0.5,
-                    font=dict(color='#D5D5CB', size=10)
+                    font=dict(color='#FFFFFF', size=12)
                 ),
                 paper_bgcolor='rgba(0,0,0,0)',
                 plot_bgcolor='rgba(0,0,0,0)',
@@ -720,9 +732,9 @@ with tab_input:
             )
             st.plotly_chart(fig, use_container_width=True)
             
-            answered_count = sum(1 for idx, r in q_df.iterrows() if st.session_state.get(f"asis_{r['question_id']}") is not None or st.session_state.get(f"skip_{r['question_id']}"))
+            answered_count = len(st.session_state.survey_answers) if st.session_state.is_submitted else max(0, min(num_questions, st.session_state.current_step))
             st.progress(answered_count / num_questions)
-            st.markdown(f"<div style='text-align:right; font-size:0.75rem; color:#666666; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
+            st.markdown(f"<div style='text-align:right; font-size:0.88rem; color:#D5D5CB; margin-top:2px;'>回答進捗: {answered_count} / {num_questions} 問</div>", unsafe_allow_html=True)
 
     # 最終送信処理の実行（デバッグ用トレース出力付き）
     if not st.session_state.is_submitted and st.session_state.current_step == num_questions and 'submit_clicked' in locals() and submit_clicked:
