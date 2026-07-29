@@ -211,6 +211,7 @@ def test_event_admin_password_is_separate_from_existing_ifm_admin():
     source = (ROOT / "consulting_week.py").read_text(encoding="utf-8")
     assert 'ADMIN_SECRET_SECTION = "consulting_week_admin"' in source
     assert "get_secret_password(st.secrets, ADMIN_SECRET_SECTION)" in source
+    assert "Consulting Week専用管理者パスワード" in source
     admin_source = source[source.index("def _admin_authenticated()") :]
     assert 'get_secret_password(st.secrets, "sales_admin")' not in admin_source
 

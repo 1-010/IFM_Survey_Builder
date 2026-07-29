@@ -442,7 +442,7 @@ def _admin_authenticated() -> bool:
 
     with st.form("cw_admin_login"):
         password = st.text_input(
-            "管理者パスワード",
+            "Consulting Week専用管理者パスワード",
             type="password",
             autocomplete="current-password",
         )
