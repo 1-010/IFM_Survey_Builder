@@ -50,6 +50,10 @@ if app_param in ["product_mapping", "mapping", "products"]:
     target_path = Path(__file__).resolve().parent / "autodesk_product_mapping.py"
     exec(open(target_path, encoding="utf-8").read(), globals())
     st.stop()
+elif app_param in ["sales_portal", "sales", "my_portal", "mypage"]:
+    target_path = Path(__file__).resolve().parent / "autodesk_sales_portal.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
 elif app_param == "factory":
     target_path = Path(__file__).resolve().parent / "autodesk_factory_survey.py"
     exec(open(target_path, encoding="utf-8").read(), globals())

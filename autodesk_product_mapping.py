@@ -1,8 +1,10 @@
 import streamlit as st
 import json
 import re
+import uuid
 import pandas as pd
 from pathlib import Path
+from db_helper import save_custom_survey, update_survey_status
 
 # Page config
 st.set_page_config(page_title="設問×Autodesk製品マッピング & AI語彙調整", layout="wide")
@@ -294,12 +296,12 @@ with tab2:
         st.info(" 上記コードブロックの右上コピーボタンを押して、ChatGPTやClaude、Geminiにそのまま貼り付けて実行してください。")
 
     with col_ai2:
-        st.markdown("####  ステップ2: AI回答の一括受け止めゾーン")
-        st.caption("AIから返ってきた回答テキスト（JSON）をそのまま以下に貼り付けて「取り込み・検証」を押してください。")
+        st.markdown("####  ステップ2: AI回答の一括受け止め＆難読化URL保存ゾーン")
+        st.caption("AIから返ってきた回答テキスト（JSON）をそのまま以下に貼り付けて「差分プレビュー」を押してください。")
         
         ai_response_input = st.text_area(
             " AIの回答テキスト貼り付けエリア",
-            height=320,
+            height=260,
             placeholder="""```json
 [
   {
@@ -356,8 +358,12 @@ with tab2:
                 with c2:
                     st.markdown(f'<div class="diff-after"><strong>[After AI提案]</strong><br>{new_text}</div>', unsafe_allow_html=True)
             
-            if st.button(" このAI調整案をアセスメントフォームに一括適用・保存"):
-                # Apply changes
+            st.markdown("---")
+            st.markdown("#####  専用アンケート発行設定")
+            owner_email_input = st.text_input(" 作成者メールアドレス (マイポータル連携用)", value=st.session_state.get("sales_email", "sasaki@autodesk.com"))
+            client_tag_input = st.text_input(" 顧客名 / 案件メモ (任意)", value=target_industry)
+
+            if st.button(" このAI調整案で専用アンケートURLを発行・保存"):
                 updated_list = []
                 parsed_map = {item["question_id"]: item for item in preview_qs if "question_id" in item}
                 
@@ -373,11 +379,46 @@ with tab2:
                     else:
                         updated_list.append(q)
                 
-                if "edited_questions" not in st.session_state:
-                    st.session_state.edited_questions = {}
-                st.session_state.edited_questions[selected_module_key] = updated_list
+                obfuscated_id = f"sf-{uuid.uuid4().hex[:8]}"
                 
-                st.balloons()
-                st.success(f" 『{selected_module_label}』 の設問定義にAI語彙調整を一括反映しました！アセスメント回答フォームでテスト可能です。")
+                success = save_custom_survey(
+                    survey_id=obfuscated_id,
+                    client_name=client_tag_input,
+                    creator=owner_email_input,
+                    questions_list=updated_list,
+                    owner_email=owner_email_input,
+                    ai_prompt=generated_prompt,
+                    status="draft",
+                    module_name=selected_module_label
+                )
+                
+                if success:
+                    st.balloons()
+                    st.session_state.last_created_survey_id = obfuscated_id
+                    st.session_state.sales_email = owner_email_input
+                    st.success(f" AIカスタムアンケートを発行・保存しました！ (ID: {obfuscated_id})")
+
+        if "last_created_survey_id" in st.session_state:
+            sid = st.session_state.last_created_survey_id
+            clean_url = f"https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?brand=autodesk&survey_id={sid}"
+            
+            st.markdown(
+                f"""
+                <div style="background-color:#122a18; border:2px solid #4dff88; padding:20px; border-radius:8px; margin:20px 0;">
+                    <h4 style="color:#4dff88; margin:0 0 10px;"> 顧客送付用 難読化URL発行完了</h4>
+                    <p style="font-size:0.95rem; color:#FFFFFF; margin-bottom:8px;">以下の安全な個別URLをコピーして顧客へお渡しください（内部パラメータは保護されています）：</p>
+                    <input type="text" value="{clean_url}" readonly style="width:100%; padding:10px; font-size:1.0rem; background:#000; color:#FFFF00; border:1px solid #4dff88; border-radius:4px;">
+                </div>
+                """,
+                unsafe_allow_html=True
+            )
+            
+            col_app1, col_app2 = st.columns(2)
+            with col_app1:
+                st.markdown(f'<a href="{clean_url}" target="_blank" style="display:inline-block; padding:10px 20px; background-color:#FFFF00; color:#000; font-weight:bold; border-radius:4px; text-decoration:none;">テスト表示（新しいタブ） →</a>', unsafe_allow_html=True)
+            with col_app2:
+                if st.button("★ このAIアンケートを公式モジュールへ正規化申請する"):
+                    if update_survey_status(sid, "pending_approval"):
+                        st.success(" IFMチームへ正規化申請を送信しました！スーパー管理者の承認後に全社共有されます。")
 
 st.caption("IFM Product Mapping & AI Assistant | Autodesk Design & Make Solutions")

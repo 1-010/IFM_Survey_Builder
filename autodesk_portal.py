@@ -239,6 +239,7 @@ with col_main:
                 さらに、営業担当がChatGPTやClaudeなどのAIを活用して、顧客の業界や商談内容に合わせた<strong>設問語彙の調整プロンプトの生成・AI回答の一括取り込み</strong>を行えます。
             </p>
             <a href="/?brand=autodesk&app=product_mapping" class="btn-tool-link">製品マッピング ＆ AI語彙調整ツールを開く →</a>
+            <a href="/?brand=autodesk&app=sales_portal" class="btn-link" style="margin-left:12px;">営業専用マイポータルを開く →</a>
         </div>
         """,
         unsafe_allow_html=True

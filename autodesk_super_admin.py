@@ -8,7 +8,9 @@ from ifm_guardrails import get_secret_password
 # Import Firestore helpers
 from db_helper import (
     get_firestore_client,
-    get_all_custom_survey_ids
+    get_all_custom_survey_ids,
+    get_all_custom_surveys,
+    update_survey_status
 )
 
 # Theme setup (Autodesk Black/Yellow)
@@ -75,7 +77,6 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# The IFM service identity stays primary; Autodesk is referenced descriptively.
 header_html = '<div style="display:flex;align-items:end;justify-content:space-between;flex-wrap:wrap;margin:12px 0 16px;gap:16px;"><div><div style="font-size:.78rem;color:#FF8A80;letter-spacing:.12em;text-transform:uppercase;font-weight:600;">IFM Database Maintenance</div><div style="font-size:1.85rem;font-weight:700;color:#FFFFFF;letter-spacing:-.03em;">超管理者用システムメンテナンス</div></div><div style="font-size:.8rem;color:#D5D5CB;">for Autodesk Design &amp; Make workflows</div></div>'
 st.markdown(header_html, unsafe_allow_html=True)
 st.markdown("<hr style='border-color:#666666; margin-top:5px; margin-bottom:20px;'>", unsafe_allow_html=True)
@@ -95,10 +96,79 @@ elif super_pw == correct_pw:
         st.error("データベースへの接続が確立できません。")
         st.stop()
         
-    tabs = st.tabs([" アンケートID管理", " 回答データ一括クレンジング", " Autodesk製品提案マッピング", " システムステータス"])
+    tabs = st.tabs([" 営業AI設問の監査 ＆ 正規化承認", " アンケートID管理", " 回答データ一括クレンジング", " Autodesk製品提案マッピング"])
     
-    # --- Tab 1: アンケートID管理 ---
+    # --- Tab 0: 営業AI設問の監査 ＆ 正規化承認 ---
     with tabs[0]:
+        st.subheader(" 営業作成AIアンケートの監査・正規化承認コンソール")
+        st.write("各営業担当がAIを使ってカスタマイズしたアンケートのプロンプト・設問定義を監査し、優秀なものを公式モジュールとして承認・昇格させます。")
+        
+        all_surveys = get_all_custom_surveys()
+        
+        if not all_surveys:
+            st.info("現在データベ―スに登録されているカスタムアンケートはありません。")
+        else:
+            filter_status = st.radio("表示フィルタ:", ["すべて", "正規化申請中 (pending_approval)", "公式採用済み (approved)", "下書き (draft)"], horizontal=True)
+            
+            filtered = all_surveys
+            if "申請中" in filter_status:
+                filtered = [s for s in all_surveys if s.get("status") == "pending_approval"]
+            elif "採用済み" in filter_status:
+                filtered = [s for s in all_surveys if s.get("status") == "approved"]
+            elif "下書き" in filter_status:
+                filtered = [s for s in all_surveys if s.get("status") == "draft"]
+                
+            st.markdown(f"**該当件数: {len(filtered)} 件**")
+            st.markdown("---")
+            
+            for s in filtered:
+                sid = s.get("survey_id")
+                cname = s.get("client_name") or "未設定"
+                owner = s.get("owner_email") or s.get("creator") or "不明"
+                status = s.get("status", "draft")
+                prompt = s.get("ai_prompt") or "プロンプト記録なし"
+                questions = s.get("questions", [])
+                
+                status_color = "#666"
+                status_text = "下書き"
+                if status == "pending_approval":
+                    status_color = "#FFFF00"
+                    status_text = "★ 正規化申請中"
+                elif status == "approved":
+                    status_color = "#4dff88"
+                    status_text = "公式採用済み"
+                    
+                with st.expander(f"【{status_text}】 ID: {sid} | 顧客名: {cname} | 作成営業: {owner}"):
+                    st.markdown(f"**作成営業**: `{owner}`")
+                    st.markdown(f"**顧客/案件メモ**: `{cname}`")
+                    st.markdown(f"**難読化URL**: `https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/?brand=autodesk&survey_id={sid}`")
+                    
+                    st.markdown("** AI指示プロンプト監査:**")
+                    st.code(prompt, language="markdown")
+                    
+                    st.markdown(f"** 設問数 ({len(questions)}問):**")
+                    for q in questions[:3]:
+                        st.markdown(f"- **[{q.get('question_id')}]**: {q.get('question_text')}")
+                    if len(questions) > 3:
+                        st.caption(f"...他 {len(questions)-3} 問")
+                        
+                    st.markdown("---")
+                    c_btn1, c_btn2 = st.columns(2)
+                    with c_btn1:
+                        if status != "approved":
+                            if st.button(f"★ このAIアンケートを公式モジュールとして承認・昇格 ({sid})", key=f"appr_{sid}"):
+                                if update_survey_status(sid, "approved"):
+                                    st.success(f"アンケート {sid} を公式採用に更新しました！")
+                                    st.rerun()
+                    with c_btn2:
+                        if status == "pending_approval":
+                            if st.button(f" 申請を却下（下書きに戻す） ({sid})", key=f"rej_{sid}"):
+                                if update_survey_status(sid, "draft"):
+                                    st.info(f"アンケート {sid} を下書きに戻しました。")
+                                    st.rerun()
+
+    # --- Tab 1: アンケートID管理 ---
+    with tabs[1]:
         st.subheader("カスタムアンケートID (surveys) の一覧 ＆ 削除")
         st.write("営業管理画面で過去に発行されたすべてのカスタムアンケート定義の一覧です。テスト用や誤作動の不要データを削除できます。")
         
@@ -109,7 +179,6 @@ elif super_pw == correct_pw:
                 d = doc.to_dict()
                 created_at_val = d.get("created_at")
                 if created_at_val:
-                    # Firestoreのtimestamp型をパース
                     try:
                         created_at_str = str(created_at_val.isoformat())[:19].replace("T", " ")
                     except:
@@ -130,8 +199,6 @@ elif super_pw == correct_pw:
                 st.info("登録されているカスタムアンケートはありません。")
             else:
                 surveys_df = pd.DataFrame(surveys_list)
-                
-                # 表示用テーブルのレンダリング
                 for s in surveys_list:
                     col_info, col_del = st.columns([8, 2])
                     with col_info:
@@ -150,227 +217,64 @@ elif super_pw == correct_pw:
                             if not st.session_state.get(pending_key):
                                 st.session_state[pending_key] = True
                                 st.rerun()
-                            db.collection("surveys").document(s['survey_id']).delete()
-                            st.session_state.pop(pending_key, None)
-                            st.success(f"ID: `{s['survey_id']}` を削除しました。画面を再読み込みしてください。")
-                            st.rerun()
+                            else:
+                                try:
+                                    db.collection("surveys").document(s['survey_id']).delete()
+                                    st.success(f"アンケート `{s['survey_id']}` を削除しました。")
+                                    st.session_state.pop(pending_key, None)
+                                    st.rerun()
+                                except Exception as e:
+                                    st.error(f"削除エラー: {e}")
                         st.markdown("</div>", unsafe_allow_html=True)
-                        
         except Exception as e:
-            st.error(f"アンケート一覧取得エラー: {e}")
-            
-    # --- Tab 2: 回答データ一括クレンジング ---
-    with tabs[1]:
-        st.subheader("送信済み回答データ (responses) の一括削除・クリーニング")
-        st.warning("【注意】回答データを削除すると復元できません。テスト用の回答やデモでの不要データを削除する目的にのみ使用してください。")
-        
-        try:
-            # responses コレクションの概要把握
-            responses_ref = db.collection("responses").stream()
-            responses_list = []
-            for doc in responses_ref:
-                d = doc.to_dict()
-                responses_list.append({
-                    "doc_id": doc.id,
-                    "timestamp": d.get("timestamp"),
-                    "respondent": d.get("respondent"),
-                    "email": d.get("email"),
-                    "survey_id": d.get("survey_id", "default"),
-                    "team": d.get("team", ""),
-                    "num_answers": len(d.get("answers", []))
-                })
-                
-            if not responses_list:
-                st.info("格納されている回答データはありません。")
-            else:
-                resp_df = pd.DataFrame(responses_list)
-                
-                # アンケートID（survey_id）ごとにグルーピングした件数表示
-                st.markdown("###  アンケートIDごとの回答蓄積状況")
-                summary_grp = resp_df.groupby('survey_id').agg(
-                    回答者ユニーク数=('email', 'nunique'),
-                    送信件数=('doc_id', 'count')
-                ).reset_index()
-                st.dataframe(summary_grp, use_container_width=True, hide_index=True)
-                
-                st.markdown("---")
-                st.markdown("###  アンケートID単位での回答データ一括削除")
-                target_del_sid = st.selectbox("一括削除対象のアンケートIDを選択してください", sorted(list(resp_df['survey_id'].unique())))
-                
-                # 削除ボタン
-                st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
-                confirm_phrase = st.text_input(
-                    "確認のためアンケートIDを入力してください",
-                    key="bulk_delete_confirmation",
-                )
-                target_count = int((resp_df['survey_id'] == target_del_sid).sum())
-                confirm_del_btn = st.button(
-                    f"アンケートID '{target_del_sid}' の回答 {target_count} 件を完全削除する",
-                    key="btn_bulk_delete_responses",
-                    disabled=confirm_phrase != target_del_sid,
-                )
-                if confirm_del_btn:
-                    # Firestoreクエリで該当ドキュメントを抽出して削除
-                    docs_to_delete = db.collection("responses").where("survey_id", "==", target_del_sid).stream()
-                    deleted_count = 0
-                    for doc in docs_to_delete:
-                        db.collection("responses").document(doc.id).delete()
-                        deleted_count += 1
-                    st.success(f"アンケートID: `{target_del_sid}` に紐づく {deleted_count} 件の回答データを一括削除しました！")
-                    st.rerun()
-                st.markdown("</div>", unsafe_allow_html=True)
-                
-                st.markdown("---")
-                st.markdown("###  個別回答レコードの一覧と個別削除")
-                for r in responses_list:
-                    col_r_info, col_r_del = st.columns([8, 2])
-                    with col_r_info:
-                        st.markdown(
-                            f" **回答者**: {r['respondent']} ({r['email']})  ·  **部署**: {r['team']}  ·  **アンケートID**: `{r['survey_id']}`  ·  **日時**: {r['timestamp'][:19].replace('T', ' ')}"
-                        )
-                    with col_r_del:
-                        st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
-                        if st.button("削除", key=f"del_resp_{r['doc_id']}"):
-                            db.collection("responses").document(r['doc_id']).delete()
-                            st.success(f"ドキュメントID: `{r['doc_id']}` を個別削除しました。")
-                            st.rerun()
-                        st.markdown("</div>", unsafe_allow_html=True)
-                        
-        except Exception as e:
-            st.error(f"回答データ一覧取得エラー: {e}")
-            
-    # --- Tab 3: Autodesk製品提案マッピング ---
-    with tabs[2]:
-        st.subheader(" アンケート設問とAutodeskプロダクトの関連性（営業用製品提案マッピング）")
-        st.write("各アセスメント設問が「どのAutodesk製品の提案や価値訴求に結びつくか」を整理したセールスチートシートです。顧客のスコア（As-Is/To-Be）に応じて提案アプローチを決定するための判断基準としてご利用ください。")
-        
-        # Mapping definition
-        product_mapping = {
-            "PE01": {
-                "dept": "生産技術",
-                "phase": "計画",
-                "title": "PE01 (計画): 生産・工程計画やレイアウト設備検討におけるデータ活用",
-                "products": "Factory Design Utilities (FDU), AutoCAD Architecture, Inventor",
-                "value_pitch": "2D-3D双方向同期レイアウト設計による手戻り防止。2Dでの簡易配置が3Dへ即座に反映され、設備干渉の早期発見が可能。",
-                "sales_hint": "L1-L2レベル（2D中心）の顧客には、FDUを用いた2D-3Dレイアウト同期と、標準アセットライブラリによる配置設計の高速化を提案。"
-            },
-            "PE02": {
-                "dept": "生産技術",
-                "phase": "設計",
-                "title": "PE02 (設計): 設備やラインの設計プロセスにおけるデータ活用",
-                "products": "Autodesk Inventor, iLogic, Informed Design",
-                "value_pitch": "パラメータ駆動設計とモデリングルールの標準化。Informed Designにより製造可能な設計条件をパラメータとしてロックし、Revitへ出力可能。",
-                "sales_hint": "L2-L3の顧客には、iLogicによる定型モデリングの自動化、およびInformed Designによるモジュール製品のデジタルカタログ化・Revitファミリ化を提案。"
-            },
-            "PE03": {
-                "dept": "生産技術",
-                "phase": "検証",
-                "title": "PE03 (検証): 設計内容の検証やシミュレーションにおけるデータ活用",
-                "products": "Autodesk Navisworks Manage, Inventor Simulation",
-                "value_pitch": "マルチサプライヤ設備データの統合、および自動干渉チェックによる施工前エラー検出。構造シミュレーションによる動作検証。",
-                "sales_hint": "L3-L4の顧客には、Navisworksを用いた干渉チェック自動化と設計変更プロセスのデジタル追跡（Issues連携）を提案。"
-            },
-            "PE04": {
-                "dept": "生産技術",
-                "phase": "建設",
-                "title": "PE04 (建設): 設備の導入や建設段階の進捗管理におけるデータ活用",
-                "products": "Autodesk Construction Cloud (ACC) / Build, Navisworks (4D)",
-                "value_pitch": "現場設備導入の進捗と計画のデジタル管理、4D施工シミュレーションによる現場干渉と作業順序の可視化・最適化。",
-                "sales_hint": "施工段階の情報分断があるL2-L3にはACCによるチェックリスト管理、L4以上には4D連動施工計画を提案して現場手戻りを防止。"
-            },
-            "PE05": {
-                "dept": "生産技術",
-                "phase": "運用",
-                "title": "PE05 (運用): 設備や生産ラインの運用・保全管理におけるデータ活用",
-                "products": "Autodesk Tandem, MES Integration APIs",
-                "value_pitch": "竣工BIMモデルからデジタルツインへの移行。工場内IoTセンサーや生産設備データ（MES）と連携し、稼働保全・予知保全を実現。",
-                "sales_hint": "運用フェーズのL3-L4顧客へTandemを訴求し、設備状態モニタリングからデジタルツインでの自動最適化へのロードマップを提示。"
-            },
-            "FI01": {
-                "dept": "工場建築・建設",
-                "phase": "計画",
-                "title": "FI01 (計画): 工場建築の計画策定や空間検討におけるデータ活用",
-                "products": "Autodesk Revit, FormIt, Autodesk Docs",
-                "value_pitch": "工場建築の初期コンセプト空間計画のデジタル可視化と、共通データ環境（CDE）による要件情報の一元管理・共有。",
-                "sales_hint": "L1-L2レベルの建築計画検討をRevitの初期ボリュームスタディとDocsによる要件管理でデジタル化することを提案。"
-            },
-            "FI02": {
-                "dept": "工場建築・建設",
-                "phase": "設計",
-                "title": "FI02 (設計): 工場建築の設計プロセスにおけるデータ活用",
-                "products": "Autodesk Revit (BIM), BIM Collaborate Pro",
-                "value_pitch": "属性（メタデータ）情報を持つインテリジェントBIMモデルの構築と、意匠・構造・設備（MEP）間のクラウドリアルタイム共同設計設計。",
-                "sales_hint": "L2-L3の3Dモデリングから、属性情報を付与したBIM設計（Revit）とクラウド共同設計（BIM Collaborate Pro）への移行を推進。"
-            },
-            "FI03": {
-                "dept": "工場建築・建設",
-                "phase": "検証",
-                "title": "FI03 (検証): 工場建築の検証（干渉チェックや施工性確認）におけるデータ活用",
-                "products": "Autodesk Navisworks Manage, BIM Collaborate (Coordination)",
-                "value_pitch": "建物構造と付帯・製造設備間の自動衝突検出（干渉チェック）。VR検証による設計不整合の現場着工前クリア。",
-                "sales_hint": "L2-L3の目視チェックから、Navisworks/BIM Collaborateを用いた自動衝突検出と指摘事項（Issues）ワークフローの運用を提案。"
-            },
-            "FI04": {
-                "dept": "工場建築・建設",
-                "phase": "建設",
-                "title": "FI04 (建設): 工場建築の施工計画や現場管理におけるデータ活用",
-                "products": "Autodesk Build, ReCap Pro (Point Cloud)",
-                "value_pitch": "3Dレーザースキャン点群（ReCap）とBIMモデルの重ね合わせによる出来形検査。現場施工計画のリアルタイム更新管理。",
-                "sales_hint": "L3-L4の出来形検証・進捗管理に対して、ReCapの点群とAutodesk Buildによる現場施工管理の組み合わせを提案。"
-            },
-            "FI05": {
-                "dept": "工場建築・建設",
-                "phase": "運用",
-                "title": "FI05 (運用): 工場の建物・設備の運用や保守管理におけるデータ活用",
-                "products": "Autodesk Tandem, Facility Manager APIs",
-                "value_pitch": "建物ファシリティマネジメント用のデジタルツイン。ライフサイクル管理や修繕履歴の紐付けによる、建物の省エネ・運用効率最適化。",
-                "sales_hint": "L3-L4の建物保全業務に対し、Tandemを用いた空間・アセットの一元的なFM運用と、将来的なスマートビルディング化を推進。"
-            }
-        }
-        
-        # Filter UI
-        selected_dept = st.selectbox("表示する部門でフィルタリング", ["すべて", "生産技術", "工場建築・建設"], key="super_admin_solution_dept")
-        
-        for qid, info in product_mapping.items():
-            if selected_dept != "すべて" and info["dept"] != selected_dept:
-                continue
-                
-            with st.container(border=True):
-                st.markdown(f"####  **{qid}**  **{info['dept']} - {info['phase']}**")
-                st.markdown(f"**設問概要:** {info['title']}")
-                
-                # Product Badge Style
-                st.markdown(
-                    f'<div style="background-color: #1A1A1A; border-left: 4px solid #FFFF00; padding: 12px; margin: 10px 0; border-radius: 4px;">'
-                    f'<span style="color: #FFFF00; font-weight: bold; font-size: 0.85rem; letter-spacing: 0.05em; text-transform: uppercase;"> 提案対象 Autodesk 製品</span><br>'
-                    f'<span style="color: #FFFFFF; font-weight: 600; font-size: 1.05rem;">{info["products"]}</span>'
-                    f'</div>', 
-                    unsafe_allow_html=True
-                )
-                
-                col_v, col_s = st.columns(2)
-                with col_v:
-                    st.markdown("** バリューピッチ（価値訴求）:**")
-                    st.write(info["value_pitch"])
-                with col_s:
-                    st.markdown("** セールスヒント（レベル別提案）:**")
-                    st.write(info["sales_hint"])
+            st.error(f"Firestore取得エラー: {e}")
 
-    # --- Tab 4: システムステータス ---
-    with tabs[3]:
-        st.subheader("データベース接続情報 ＆ サーバー環境ステータス")
-        st.write(f"**データベース**: Google Cloud Firestore (プロジェクトID: `{db.project}`)")
-        st.write(f"**現在のローカル時刻**: {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
-        st.write("**Firestore コレクションステータス**:")
+    # --- Tab 2: 回答データ一括クレンジング ---
+    with tabs[2]:
+        st.subheader("回答データ (responses) の一括削除・メンテナンス")
+        st.warning(" 警告: ここでの操作は復元できません。動作テスト用データや誤入力データをクレンジングする場合のみ実行してください。")
         
         try:
-            surveys_cnt = sum(1 for _ in db.collection("surveys").select([]).stream())
-            responses_cnt = sum(1 for _ in db.collection("responses").select([]).stream())
-            st.write(f"- surveys（アンケートID定義数）: `{surveys_cnt}` 件")
-            st.write(f"- responses（送信済み回答ドキュメント数）: `{responses_cnt}` 件")
-        except Exception as e:
-            st.write(f"ステータス取得エラー: {e}")
+            resp_docs = list(db.collection("responses").stream())
+            total_responses = len(resp_docs)
+            st.info(f"現在データベースに保存されている総回答ドキュメント数: **{total_responses}** 件")
             
-else:
-    if super_pw != "":
-        st.error("超管理者専用パスワードが正しくありません。")
+            if total_responses > 0:
+                st.markdown("<div class='danger-btn'>", unsafe_allow_html=True)
+                pending_clean_key = "confirm_all_responses_clean"
+                if st.session_state.get(pending_clean_key):
+                    st.error("【注意】本当に全回答データを削除します。この操作は取り消せません。")
+                if st.button(
+                    "【注意】すべての回答データを一括削除する" if not st.session_state.get(pending_clean_key) else "【確定】すべての回答データを即時消去する",
+                    key="btn_clean_all_responses"
+                ):
+                    if not st.session_state.get(pending_clean_key):
+                        st.session_state[pending_clean_key] = True
+                        st.rerun()
+                    else:
+                        try:
+                            batch = db.batch()
+                            count = 0
+                            for doc in resp_docs:
+                                batch.delete(doc.reference)
+                                count += 1
+                                if count % 450 == 0:
+                                    batch.commit()
+                                    batch = db.batch()
+                            batch.commit()
+                            st.success(f"全 {total_responses} 件の回答データを安全に消去しました。")
+                            st.session_state.pop(pending_clean_key, None)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"一括削除処理エラー: {e}")
+                st.markdown("</div>", unsafe_allow_html=True)
+        except Exception as e:
+            st.error(f"Firestore取得エラー: {e}")
+
+    # --- Tab 3: Autodesk製品提案マッピング ---
+    with tabs[3]:
+        st.subheader("Autodeskソリューション・製品提案マスタ管理")
+        st.caption("各部門・フェーズごとの推奨Autodesk製品（Revit, Inventor, Navisworks, ACC, Tandem 等）のマッピング設定です。")
+        st.info("現在は JSON マスタ (`ifm_questions.json`) および製品マッピングテーブルで自動制御されています。")
+
+st.caption("IFM Database Maintenance | Autodesk Design & Make Solutions")

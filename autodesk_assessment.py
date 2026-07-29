@@ -57,6 +57,10 @@ if app_param in ["product_mapping", "mapping", "products"]:
     target_path = SCRIPT_DIR / "autodesk_product_mapping.py"
     exec(open(target_path, encoding="utf-8").read(), globals())
     st.stop()
+elif app_param in ["sales_portal", "sales", "my_portal", "mypage"]:
+    target_path = SCRIPT_DIR / "autodesk_sales_portal.py"
+    exec(open(target_path, encoding="utf-8").read(), globals())
+    st.stop()
 elif app_param in ["portal", "console"] or (brand_param == "autodesk" and not app_param and not tab_param and not survey_id_param):
     target_path = SCRIPT_DIR / "autodesk_portal.py"
     exec(open(target_path, encoding="utf-8").read(), globals())
@@ -567,14 +571,20 @@ with tab_input:
                 tobe_key = f"tobe_{qid}"
                 
                 if asis_key not in st.session_state:
-                    st.session_state[asis_key] = 2
+                    st.session_state[asis_key] = 2.0
                 if tobe_key not in st.session_state:
-                    st.session_state[tobe_key] = 4
+                    st.session_state[tobe_key] = 4.0
+                
+                st.session_state.survey_answers[qid] = {
+                    "asis": float(st.session_state[asis_key]),
+                    "tobe": float(st.session_state[tobe_key]),
+                    "skip": skip
+                }
                 
                 if not skip:
                     # レベルカードの表示
-                    as_is_val = st.session_state[asis_key]
-                    to_be_val = st.session_state[tobe_key]
+                    as_is_val = float(st.session_state[asis_key])
+                    to_be_val = float(st.session_state[tobe_key])
                     
                     levels_html = "<div style='display: flex; flex-direction: column; gap: 8px; margin-top: 14px; margin-bottom: 16px;'>"
                     for lvl in ["L1", "L2", "L3", "L4", "L5"]:
@@ -589,15 +599,15 @@ with tab_input:
                         if is_asis and is_tobe:
                             border_color = "#FFFF00" 
                             bg_color = "rgba(255, 255, 0, 0.08)"
-                            badge_html = "<span style='background-color:#FFFF00; color:#000000; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is & To-Be</span>"
+                            badge_html = "<span style='background-color:#FFFF00; color:#000000 !important; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is & To-Be</span>"
                         elif is_asis:
                             border_color = "#1D91D0" 
                             bg_color = "rgba(29, 145, 208, 0.12)"
-                            badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is</span>"
+                            badge_html = "<span style='background-color:#1D91D0; color:#FFFFFF !important; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>As-Is</span>"
                         elif is_tobe:
                             border_color = "#2AD0A9" 
                             bg_color = "rgba(42, 208, 169, 0.08)"
-                            badge_html = "<span style='background-color:#2AD0A9; color:#000000; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>To-Be</span>"
+                            badge_html = "<span style='background-color:#2AD0A9; color:#000000 !important; font-size:0.8rem; font-weight:800; padding:2px 8px; border-radius:3px; margin-right:8px;'>To-Be</span>"
                             
                         lvl_text = str(row["levels"][lvl]).replace('\n', '<br>')
                         levels_html += f'<div style="border-left: 4px solid {border_color}; background-color: {bg_color}; padding: 10px 14px; border-top: 1px solid rgba(255,255,255,0.08); border-right: 1px solid rgba(255,255,255,0.08); border-bottom: 1px solid rgba(255,255,255,0.08); border-radius:4px;"><div style="display: flex; align-items: center; margin-bottom: 4px;">{badge_html}<b style="font-size: 0.95rem; color: #FFFF00; font-weight: 700;">Level {lvl_num}</b></div><div style="font-size: 1.02rem; color: #FFFFFF; line-height: 1.6; white-space: pre-wrap;">{lvl_text}</div></div>'
@@ -608,7 +618,7 @@ with tab_input:
                     col_s1, col_s2 = st.columns(2)
                     with col_s1:
                         st.markdown("<div class='asis-slider-container'>", unsafe_allow_html=True)
-                        st.slider("現状の成熟度評価 (As-Is)", 1, 5, key=asis_key, disabled=(step_idx < st.session_state.current_step))
+                        st.slider("現状の成熟度評価 (As-Is)", min_value=1.0, max_value=5.0, step=0.5, key=asis_key, disabled=(step_idx < st.session_state.current_step))
                         st.markdown("</div>", unsafe_allow_html=True)
                     with col_s2:
                         st.markdown("<div class='tobe-slider-container'>", unsafe_allow_html=True)

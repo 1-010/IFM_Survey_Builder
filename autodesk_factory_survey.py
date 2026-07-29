@@ -426,20 +426,20 @@ with tabs[0]:
                 tobe_key = f"tobe_{qid}"
                 
                 if asis_key not in st.session_state:
-                    st.session_state[asis_key] = 2
+                    st.session_state[asis_key] = 2.0
                 if tobe_key not in st.session_state:
-                    st.session_state[tobe_key] = 4
+                    st.session_state[tobe_key] = 4.0
                 
                 # Update persistent answers store
                 st.session_state.survey_answers[qid] = {
-                    "asis": st.session_state[asis_key],
-                    "tobe": st.session_state[tobe_key],
+                    "asis": float(st.session_state[asis_key]),
+                    "tobe": float(st.session_state[tobe_key]),
                     "skip": skip
                 }
                 
                 if not skip:
-                    as_is_val = st.session_state[asis_key]
-                    to_be_val = st.session_state[tobe_key]
+                    as_is_val = float(st.session_state[asis_key])
+                    to_be_val = float(st.session_state[tobe_key])
                     
                     levels_html = "<div style='display: flex; flex-direction: column; gap: 8px; margin-top: 14px; margin-bottom: 16px;'>"
                     for lvl in ["L1", "L2", "L3", "L4", "L5"]:
@@ -473,7 +473,7 @@ with tabs[0]:
                     col_s1, col_s2 = st.columns(2)
                     with col_s1:
                         st.markdown("<div class='asis-slider-container'>", unsafe_allow_html=True)
-                        st.slider("現状の成熟度評価 (As-Is)", 1, 5, key=asis_key, disabled=(step_idx < st.session_state.current_step))
+                        st.slider("現状の成熟度評価 (As-Is)", min_value=1.0, max_value=5.0, step=0.5, key=asis_key, disabled=(step_idx < st.session_state.current_step))
                         st.markdown("</div>", unsafe_allow_html=True)
                     with col_s2:
                         st.markdown("<div class='tobe-slider-container'>", unsafe_allow_html=True)
