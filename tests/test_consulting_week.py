@@ -207,6 +207,14 @@ def test_event_collection_is_separate_from_existing_ifm_collections():
     assert 'db.collection("surveys")' not in source
 
 
+def test_event_admin_password_is_separate_from_existing_ifm_admin():
+    source = (ROOT / "consulting_week.py").read_text(encoding="utf-8")
+    assert 'ADMIN_SECRET_SECTION = "consulting_week_admin"' in source
+    assert "get_secret_password(st.secrets, ADMIN_SECRET_SECTION)" in source
+    admin_source = source[source.index("def _admin_authenticated()") :]
+    assert 'get_secret_password(st.secrets, "sales_admin")' not in admin_source
+
+
 def test_frontend_uses_local_storage_debounce_and_batched_dirty_entries():
     source = (
         ROOT / "components" / "consulting_week_form" / "main.js"

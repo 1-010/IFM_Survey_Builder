@@ -16,8 +16,20 @@ Consulting Week（2026-07-28、Asia/Tokyo）専用の匿名イベント回答フ
 uv run --with-requirements requirements.txt streamlit run ifm_dashboard.py
 ```
 
-管理画面は既存の `sales_admin.password` を再利用します。秘密値をソースコードへ
+管理画面はConsulting Week専用の `consulting_week_admin.password` を使います。
+既存IFMフォームの `sales_admin.password` とは分離し、秘密値をソースコードへ
 追加しないでください。
+
+Streamlit Community CloudのApp settings → Secretsへ、既存設定を残したまま次を
+追加します。`<専用パスワード>` はチャットやGitへ貼らず、設定画面へ直接入力して
+ください。
+
+```toml
+[consulting_week_admin]
+password = "<専用パスワード>"
+```
+
+設定が存在しない、または空の場合は管理画面をfail-closedで停止します。
 
 ## データ
 

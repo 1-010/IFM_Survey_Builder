@@ -41,6 +41,7 @@ EVENT_CONFIG_PATH = ROOT / "data" / "consulting_week_2026.json"
 COMPONENT_PATH = ROOT / "components" / "consulting_week_form"
 AUTODESK_LOGO_PATH = ROOT / "data" / "images" / "autodesk_logo_white.svg"
 COLLECTION_NAME = "event_responses_consulting_week_2026"
+ADMIN_SECRET_SECTION = "consulting_week_admin"
 PUBLIC_BASE_URL = (
     "https://ifmsurveybuilder-dm4twazgypcxpcagcebod5.streamlit.app/"
 )
@@ -431,11 +432,11 @@ def _qr_png(url: str) -> bytes:
 def _admin_authenticated() -> bool:
     if st.session_state.get("cw_admin_authenticated"):
         return True
-    correct_password = get_secret_password(st.secrets, "sales_admin")
+    correct_password = get_secret_password(st.secrets, ADMIN_SECRET_SECTION)
     if correct_password is None:
         st.error(
-            "管理者認証が設定されていません。Secrets の "
-            "sales_admin.password を設定してください。"
+            "Consulting Week管理者認証が設定されていません。Secrets の "
+            "consulting_week_admin.password を設定してください。"
         )
         return False
 
