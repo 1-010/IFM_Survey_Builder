@@ -583,10 +583,13 @@ def render_consulting_week(
     view: str = "respond", *, configure_page: bool = True
 ) -> None:
     if configure_page:
-        st.set_page_config(
-            page_title="Consulting Week Session Feedback",
-            layout="wide",
-        )
+        try:
+            st.set_page_config(
+                page_title="Consulting Week Session Feedback",
+                layout="wide",
+            )
+        except Exception:
+            pass
     config = _event_config()
     if view == "admin":
         _render_admin_view(config)

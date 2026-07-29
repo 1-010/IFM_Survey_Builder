@@ -44,7 +44,10 @@ def _query_param(name, default=None):
 if _query_param("event") == "consulting-week-2026":
     from consulting_week import render_consulting_week
 
-    render_consulting_week(view=str(_query_param("view", "respond")).lower())
+    render_consulting_week(
+        view=str(_query_param("view", "respond")).lower(),
+        configure_page=False,
+    )
     st.stop()
 
 import sys
