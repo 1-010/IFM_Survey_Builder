@@ -47,6 +47,18 @@ if _query_param("event") == "consulting-week-2026":
     render_consulting_week(view=str(_query_param("view", "respond")).lower())
     st.stop()
 
+import sys
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
+def run_subapp(target_file):
+    target_path = SCRIPT_DIR / target_file
+    exec_globals = dict(globals())
+    exec_globals["__file__"] = str(target_path)
+    exec(open(target_path, encoding="utf-8").read(), exec_globals)
+    st.stop()
+
 # Sub-app routing for Streamlit Cloud entry point
 app_param = _query_param("app")
 tab_param = _query_param("tab")
@@ -54,37 +66,21 @@ survey_id_param = _query_param("survey_id")
 brand_param = _query_param("brand")
 
 if app_param in ["product_mapping", "mapping", "products"]:
-    target_path = SCRIPT_DIR / "autodesk_product_mapping.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_product_mapping.py")
 elif app_param in ["sales_portal", "sales", "my_portal", "mypage"]:
-    target_path = SCRIPT_DIR / "autodesk_sales_portal.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_sales_portal.py")
 elif app_param in ["portal", "console"] or (brand_param == "autodesk" and not app_param and not tab_param and not survey_id_param):
-    target_path = SCRIPT_DIR / "autodesk_portal.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_portal.py")
 elif app_param == "factory":
-    target_path = SCRIPT_DIR / "autodesk_factory_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_factory_survey.py")
 elif app_param == "aec":
-    target_path = SCRIPT_DIR / "autodesk_aec_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_aec_survey.py")
 elif app_param == "civil":
-    target_path = SCRIPT_DIR / "autodesk_civil_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_civil_survey.py")
 elif app_param == "mfg":
-    target_path = SCRIPT_DIR / "autodesk_mfg_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_mfg_survey.py")
 elif app_param in ["super_admin", "super-admin"]:
-    target_path = SCRIPT_DIR / "autodesk_super_admin.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_super_admin.py")
 
 
 # Load default questions

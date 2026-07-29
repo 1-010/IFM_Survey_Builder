@@ -1,11 +1,20 @@
-import streamlit as st
-import pandas as pd
-import json
+import sys
+import os
 from pathlib import Path
-from datetime import datetime
+
+SCRIPT_DIR = Path(__file__).resolve().parent
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
 
 # 必ず最初に page_config を呼び出す (Streamlitの仕様制限回避)
 st.set_page_config(page_title="IFM Maturity Assessment", layout="wide")
+
+def run_subapp(target_file):
+    target_path = SCRIPT_DIR / target_file
+    exec_globals = dict(globals())
+    exec_globals["__file__"] = str(target_path)
+    exec(open(target_path, encoding="utf-8").read(), exec_globals)
+    st.stop()
 
 # 安全にクエリパラメータを取得（新旧バージョン互換性ハック）
 brand_param = None
@@ -47,41 +56,23 @@ if event_param == "consulting-week-2026":
 
 # サブアプリへの統合ルーティング（ブランド・アプリパラメータ判定）
 if app_param in ["product_mapping", "mapping", "products"]:
-    target_path = Path(__file__).resolve().parent / "autodesk_product_mapping.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_product_mapping.py")
 elif app_param in ["sales_portal", "sales", "my_portal", "mypage"]:
-    target_path = Path(__file__).resolve().parent / "autodesk_sales_portal.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_sales_portal.py")
 elif app_param == "factory":
-    target_path = Path(__file__).resolve().parent / "autodesk_factory_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_factory_survey.py")
 elif app_param == "aec":
-    target_path = Path(__file__).resolve().parent / "autodesk_aec_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_aec_survey.py")
 elif app_param == "civil":
-    target_path = Path(__file__).resolve().parent / "autodesk_civil_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_civil_survey.py")
 elif app_param == "mfg":
-    target_path = Path(__file__).resolve().parent / "autodesk_mfg_survey.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_mfg_survey.py")
 elif app_param in ["super_admin", "super-admin"]:
-    target_path = Path(__file__).resolve().parent / "autodesk_super_admin.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_super_admin.py")
 elif app_param in ["portal", "console"] or (brand_param == "autodesk" and not app_param and not tab_param and not survey_id_param) or (not brand_param and not app_param and not tab_param and not survey_id_param):
-    target_path = Path(__file__).resolve().parent / "autodesk_portal.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_portal.py")
 elif app_param == "assessment" or tab_param or survey_id_param:
-    target_path = Path(__file__).resolve().parent / "autodesk_assessment.py"
-    exec(open(target_path, encoding="utf-8").read(), globals())
-    st.stop()
+    run_subapp("autodesk_assessment.py")
 import json
 import plotly.graph_objects as go
 from pathlib import Path

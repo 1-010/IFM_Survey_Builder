@@ -2,8 +2,18 @@ import streamlit as st
 import json
 import re
 import uuid
+import sys
 import pandas as pd
 from pathlib import Path
+
+try:
+    SCRIPT_DIR = Path(__file__).resolve().parent
+except NameError:
+    SCRIPT_DIR = Path(".").resolve()
+
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 from db_helper import save_custom_survey, update_survey_status
 
 # Page config

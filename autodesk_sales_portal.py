@@ -1,6 +1,16 @@
 import streamlit as st
 import pandas as pd
+import sys
 from pathlib import Path
+
+try:
+    SCRIPT_DIR = Path(__file__).resolve().parent
+except NameError:
+    SCRIPT_DIR = Path(".").resolve()
+
+if str(SCRIPT_DIR) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_DIR))
+
 from db_helper import (
     verify_or_register_sales_user,
     get_surveys_by_owner,
