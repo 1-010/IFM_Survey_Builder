@@ -2,7 +2,7 @@ import streamlit as st
 from datetime import datetime
 from pathlib import Path
 
-# Theme setup (Autodesk Black/Yellow/Cyan modern dark theme)
+# Theme setup (Autodesk Black/Yellow modern dark theme)
 st.markdown(
     """
     <style>
@@ -34,18 +34,18 @@ st.markdown(
     }
     
     .card-tool {
-        background-color: #0d1b2a;
-        border: 1px solid #1e3a8a;
-        border-left: 5px solid #00F0FF;
+        background-color: #121212;
+        border: 1px solid #333333;
+        border-left: 5px solid #FFFF00;
         padding: 22px;
         border-radius: 6px;
         margin-bottom: 20px;
-        box-shadow: 0 4px 12px rgba(0,240,255,0.1);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.5);
         transition: all 0.25s ease;
     }
     .card-tool:hover {
-        border-color: #00F0FF;
-        background-color: #13263c;
+        border-color: #FFFF00;
+        background-color: #1c1c1c;
         transform: translateY(-2px);
     }
     
@@ -58,7 +58,7 @@ st.markdown(
     }
     
     /* Strictly enforce BLACK text on ALL yellow backgrounds */
-    .badge-domain, .badge-domain * {
+    .badge-domain, .badge-domain *, .badge-tool, .badge-tool * {
         display: inline-block;
         background-color: #FFFF00 !important;
         color: #000000 !important;
@@ -71,20 +71,7 @@ st.markdown(
         letter-spacing: 0.05em;
     }
     
-    .badge-tool, .badge-tool * {
-        display: inline-block;
-        background-color: #00F0FF !important;
-        color: #000000 !important;
-        font-size: 0.78rem !important;
-        font-weight: 800 !important;
-        padding: 3px 10px;
-        border-radius: 3px;
-        text-transform: uppercase;
-        margin-bottom: 8px;
-        letter-spacing: 0.05em;
-    }
-    
-    .btn-link, .btn-link * {
+    .btn-link, .btn-link *, .btn-tool-link, .btn-tool-link * {
         display: inline-block;
         margin-top: 10px;
         padding: 8px 18px;
@@ -96,28 +83,10 @@ st.markdown(
         text-decoration: none;
         transition: all 0.2s ease;
     }
-    .btn-link:hover, .btn-link:hover * {
+    .btn-link:hover, .btn-link:hover *, .btn-tool-link:hover, .btn-tool-link:hover * {
         background-color: #e6e600 !important;
         color: #000000 !important;
         box-shadow: 0 2px 8px rgba(255,255,0,0.4);
-    }
-    
-    .btn-tool-link, .btn-tool-link * {
-        display: inline-block;
-        margin-top: 10px;
-        padding: 8px 18px;
-        background-color: #00F0FF !important;
-        color: #000000 !important;
-        font-weight: 800 !important;
-        font-size: 0.95rem !important;
-        border-radius: 4px;
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
-    .btn-tool-link:hover, .btn-tool-link:hover * {
-        background-color: #00cce6 !important;
-        color: #000000 !important;
-        box-shadow: 0 2px 8px rgba(0,240,255,0.4);
     }
     
     header {visibility: hidden; display: none !important;}
@@ -232,7 +201,7 @@ with col_main:
         """
         <div class="card-tool">
             <span class="badge-tool">SALES &amp; AI TOOL</span>
-            <h4 style="margin:4px 0 8px; font-weight:700; color:#00F0FF;"> 設問×Autodesk製品マッピング ＆ AI語彙調整アシスタント</h4>
+            <h4 style="margin:4px 0 8px; font-weight:700; color:#FFFF00;"> 設問×Autodesk製品マッピング ＆ AI語彙調整アシスタント</h4>
             <p style="font-size:0.95rem; color:#E0E0E0; margin-bottom:14px; line-height:1.6;">
                 専門モジュールごとの設問と対応する <strong>Autodesk 製品（Revit, Inventor, Navisworks, ACC, Tandem 等）のマッピング一覧</strong> を閲覧・検索できます。<br>
                 さらに、営業担当がChatGPTやClaudeなどのAIを活用して、顧客の業界や商談内容に合わせた<strong>設問語彙の調整プロンプトの生成・AI回答の一括取り込み</strong>を行えます。

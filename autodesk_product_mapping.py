@@ -11,7 +11,7 @@ st.set_page_config(page_title="設問×Autodesk製品マッピング & AI語彙�
 SCRIPT_DIR = Path(__file__).resolve().parent
 DATA_JSON = SCRIPT_DIR / "data" / "ifm_questions.json"
 
-# Theme setup (Autodesk Black/Yellow/Cyan modern dark theme)
+# Theme setup (Autodesk Black/Yellow/White modern dark theme)
 st.markdown(
     """
     <style>
@@ -19,7 +19,7 @@ st.markdown(
         background-color: #000000 !important;
         color: #FFFFFF !important;
         font-family: Arial, system-ui, -apple-system, "Segoe UI", sans-serif !important;
-        font-size: 15px;
+        font-size: 16px !important;
     }
     
     h1, h2, h3, h4, h5, h6, label, span, p {
@@ -29,27 +29,29 @@ st.markdown(
     .mapping-card {
         background-color: #121212;
         border: 1px solid #333333;
-        border-left: 4px solid #FFFF00;
-        padding: 18px;
+        border-left: 5px solid #FFFF00;
+        padding: 20px;
         border-radius: 6px;
-        margin-bottom: 16px;
+        margin-bottom: 18px;
     }
     
-    .product-tag {
+    /* Product tags: Yellow background with bold black text */
+    .product-tag, .product-tag * {
         display: inline-block;
-        background-color: #00F0FF;
-        color: #000000;
-        font-size: 0.78rem;
-        font-weight: 700;
-        padding: 3px 10px;
-        border-radius: 12px;
+        background-color: #FFFF00 !important;
+        color: #000000 !important;
+        font-size: 0.82rem !important;
+        font-weight: 800 !important;
+        padding: 4px 12px;
+        border-radius: 14px;
         margin-right: 6px;
         margin-bottom: 6px;
+        letter-spacing: 0.02em;
     }
     
     .prompt-box {
-        background-color: #0d1b2a;
-        border: 1px solid #1e3a8a;
+        background-color: #121212;
+        border: 1px solid #333333;
         border-radius: 6px;
         padding: 16px;
         margin-top: 10px;
@@ -57,29 +59,34 @@ st.markdown(
     
     .diff-before {
         background-color: #2a1212;
-        border-left: 3px solid #ff4d4d;
-        padding: 10px;
+        border-left: 4px solid #ff4d4d;
+        padding: 12px;
         border-radius: 4px;
-        font-size: 0.88rem;
+        font-size: 0.92rem;
     }
     
     .diff-after {
         background-color: #122a18;
-        border-left: 3px solid #4dff88;
-        padding: 10px;
+        border-left: 4px solid #4dff88;
+        padding: 12px;
         border-radius: 4px;
-        font-size: 0.88rem;
+        font-size: 0.92rem;
     }
 
     div.stButton > button {
         background-color: #FFFF00 !important;
         color: #000000 !important;
-        font-weight: 700 !important;
+        font-weight: 800 !important;
         border-radius: 4px !important;
         border: none !important;
+        font-size: 1.0rem !important;
+        padding: 10px 24px !important;
     }
     div.stButton > button:hover {
         background-color: #e6e600 !important;
+        color: #000000 !important;
+    }
+    div.stButton > button * {
         color: #000000 !important;
     }
 
@@ -145,11 +152,11 @@ st.markdown(
     """
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
         <div>
-            <div style="font-size:0.8rem; color:#00F0FF; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;">SALES ENGINEERING & AI ASSISTANT</div>
+            <div style="font-size:0.85rem; color:#FFFF00; font-weight:700; letter-spacing:0.1em; text-transform:uppercase;">SALES ENGINEERING & AI ASSISTANT</div>
             <h2 style="margin:0; font-weight:700;"> 設問×Autodesk製品マッピング ＆ AI語彙調整アシスタント</h2>
         </div>
         <div>
-            <a href="/?brand=autodesk&app=portal" target="_self" style="background-color:#333; color:#FFF; padding:8px 16px; border-radius:4px; text-decoration:none; font-size:0.85rem;">← ポータル画面へ戻る</a>
+            <a href="/?brand=autodesk&app=portal" target="_self" style="background-color:#333; color:#FFF; padding:8px 16px; border-radius:4px; text-decoration:none; font-size:0.85rem; font-weight:600;">← ポータル画面へ戻る</a>
         </div>
     </div>
     """,
@@ -203,15 +210,15 @@ with tab1:
                 st.markdown(f"""
                 <div class="mapping-card">
                     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">
-                        <span style="font-size:1.1rem; font-weight:700; color:#FFFF00;">{qid} 【{dept} / {phase}】</span>
+                        <span style="font-size:1.15rem; font-weight:700; color:#FFFF00;">{qid} 【{dept} / {phase}】</span>
                         <div>
                             {''.join([f'<span class="product-tag">{p}</span>' for p in mapping_info['products']])}
                         </div>
                     </div>
-                    <div style="font-weight:600; font-size:0.95rem; margin-bottom:10px; color:#FFFFFF; white-space:pre-wrap;">{text}</div>
-                    <div style="background-color:#1a1a1a; padding:10px; border-radius:4px; margin-bottom:10px; font-size:0.88rem; border-left:3px solid #00F0FF;">
-                        <strong style="color:#00F0FF;"> 推奨商談シナリオ:</strong> {mapping_info['scenario']}<br>
-                        <strong style="color:#00F0FF;"> 顧客提供価値 (Value Prop):</strong> {mapping_info['value']}
+                    <div style="font-weight:600; font-size:1.02rem; margin-bottom:12px; color:#FFFFFF; white-space:pre-wrap; line-height:1.6;">{text}</div>
+                    <div style="background-color:#1a1a1a; padding:12px 14px; border-radius:4px; margin-bottom:10px; font-size:0.95rem; border-left:4px solid #FFFF00;">
+                        <strong style="color:#FFFFFF;"> 推奨商談シナリオ:</strong> <span style="color:#D5D5CB;">{mapping_info['scenario']}</span><br>
+                        <strong style="color:#FFFFFF;"> 顧客提供価値 (Value Prop):</strong> <span style="color:#D5D5CB;">{mapping_info['value']}</span>
                     </div>
                 </div>
                 """, unsafe_allow_html=True)
