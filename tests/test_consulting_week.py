@@ -212,6 +212,8 @@ def test_event_admin_password_is_separate_from_existing_ifm_admin():
     assert 'ADMIN_SECRET_SECTION = "consulting_week_admin"' in source
     assert "get_secret_password(st.secrets, ADMIN_SECRET_SECTION)" in source
     assert "Consulting Week専用管理者パスワード" in source
+    assert '[data-testid="stFormSubmitButton"] button p' in source
+    assert "-webkit-text-fill-color: #000 !important" in source
     admin_source = source[source.index("def _admin_authenticated()") :]
     assert 'get_secret_password(st.secrets, "sales_admin")' not in admin_source
 

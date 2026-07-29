@@ -469,6 +469,14 @@ def _render_admin_view(config: dict[str, Any]) -> None:
         }
         .block-container {max-width: 1380px; padding-top: 1.4rem;}
         header, footer, #MainMenu {display:none !important;}
+        [data-testid="stFormSubmitButton"] button,
+        [data-testid="stFormSubmitButton"] button:hover,
+        [data-testid="stFormSubmitButton"] button:focus,
+        [data-testid="stFormSubmitButton"] button:active,
+        [data-testid="stFormSubmitButton"] button p {
+            color: #000 !important;
+            -webkit-text-fill-color: #000 !important;
+        }
         </style>
         """,
         unsafe_allow_html=True,
