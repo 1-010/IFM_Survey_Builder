@@ -91,6 +91,8 @@ if not st.session_state.sales_email:
     st.markdown("###  営業ログイン ＆ マイポータル開設")
     st.caption("メールアドレスと簡易暗証番号（4桁以上のPIN）を入力してログインしてください。初回は自動登録されます。")
     
+    st.warning("⚠️ **【重要・セキュリティ注意】**\n\n**絶対に会社の公式ログインパスワード（Autodesk SSOパスワードや社内PCログインパスワード）を入力しないでください！**\n\nここに入力する暗証番号は、本アンケートポータル専用の簡易パスワード（任意の数字4桁など）です。")
+    
     col_l1, col_l2 = st.columns([1, 1])
     with col_l1:
         login_email = st.text_input(" メールアドレス *", placeholder="example@autodesk.com")
